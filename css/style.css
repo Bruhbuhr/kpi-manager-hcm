@@ -664,3 +664,14 @@ html[data-theme="bujo"] .brand .lg-t{background:var(--acc);color:#fff}
 .thp.bujo .thpg{background-image:radial-gradient(#c9d0c6 1px,transparent 1.3px);background-size:9px 9px}
 .thp.planner .thpg{background-image:repeating-linear-gradient(180deg,transparent 0 13px,#dfe1e5 13px 14px)}
 [data-nb] .pg{background:var(--mute-s)}[data-nb] .pg i{background:var(--acc)}
+/* tag chọn được (quản lý) và danh sách việc được giao (nhân viên) */
+.tgck{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;border:1.5px solid var(--line);cursor:pointer;font-size:13px;font-weight:600;background:var(--panel)}
+.tgck input{width:15px;height:15px;margin:0}
+.tgck.pri{color:#8a5a0b}.tgck.imp{color:#b3261e}
+.tgck.pri:has(input:checked){background:var(--warn-s);border-color:#e0b46a}
+.tgck.imp:has(input:checked){background:var(--bad-s);border-color:#eba29c}
+.bmlist{border:1px solid var(--line);border-left:3px solid #7c5cd6;border-radius:6px;padding:10px 12px;margin:0 0 10px;background:var(--panel)}
+.bmlist ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:5px}
+.bmlist li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:13.5px}
+.bmlist li .pf{margin:0}
+[data-nb] .pf.mgr{background:#ede9fe;color:#5b21b6}[data-nb] .pf.grp{background:#e0f2fe;color:#075985}
