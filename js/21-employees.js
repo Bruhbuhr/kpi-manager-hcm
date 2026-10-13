@@ -177,7 +177,8 @@ function taskForm(empId,y,mm,id,opt={}){
   if(assign&&!can('manage'))return toast('Chỉ quản lý được giao việc.','error');
   const ap=apOf(t),mg=can('manage'),legacy=!!id&&!wOk(+t.weight),nx=nextOf(y,mm),nxL=mLbl(nx.mm,nx.year,y),mv=!!id&&canSheet(empId)&&canCarry(t,scoreTask(t));
   if(!assign&&!canTask(empId,id?t:null))return toast(canSheet(empId)?'Việc đã được quản lý Duyệt, chỉ quản lý sửa được.':'Bạn không có quyền sửa việc này.','error');
-  const g=grpOfT(t),glock=!mg&&!!(g&&g.locked),lock=!mg&&byMgr(t)||glock,c=mcOf(t),tg=tagsOf(t);   /* việc By Manager / nhóm đã được duyệt: nhân viên không đổi nội dung, deadline */
+  const g=grpOfT(t),glock=!mg&&!!(g&&g.locked),lock=!mg&&byMgr(t)||glock,c=mcOf(t),tg=tagsOf(t);
+  const dlock=lock||(!mg&&!!id&&!!t.deadline);   /* deadline đã nhập thì nhân viên không đổi được nữa; cần dời thì nhờ quản lý */   /* việc By Manager / nhóm đã được duyệt: nhân viên không đổi nội dung, deadline */
   /* người làm chung: thành viên hiện có, người đang được mời, và danh sách để chọn thêm */
   const inGrp=g?[...g.members,...(g.invited||[])]:[],opts=assign?[]:dirEmps().filter(x=>x.id!==empId&&!inGrp.includes(x.id));
   MATE_OPTS={};opts.forEach(x=>{MATE_OPTS[`${x.name} · ${x.code}`]=x.id});
@@ -195,7 +196,7 @@ function taskForm(empId,y,mm,id,opt={}){
     ${inp('weight',`Trọng số – nhân viên tự chấm (${W_MIN}–${W_MAX})`,t.weight,{type:'number',step:legacy?'any':'1',req:1,attrs:legacy?'':`min="${W_MIN}" max="${W_MAX}" inputmode="numeric"`})}${mg?sel('approval','Quản lý duyệt',[['','Chờ duyệt'],[AP_VAL.ok,'Duyệt – tính điểm vào KPI'],[AP_VAL.recheck,'Re-check – không tính điểm']],AP_VAL[ap]):`<div class="f"><span>Quản lý duyệt</span><div>${apBd(ap)}</div></div>`}
     ${mg?`<label class="f full" id="kt-mcw" hidden><span>Comment by Manager <small class="muted">(nhân viên sẽ thấy; chỉ nhập khi chọn Re-check)</small></span><textarea class="in" name="mc" rows="2" maxlength="500" placeholder="Cần sửa / bổ sung gì…">${esc(c&&!c.done?c.text:'')}</textarea></label>`:''}
     ${legacy?`<p class="hint full">Trọng số đang lưu là ${esc(t.weight)}, nằm ngoài thang ${W_MIN}–${W_MAX}. Có thể giữ nguyên; nếu sửa, hãy nhập số nguyên từ ${W_MIN} đến ${W_MAX}.</p>`:''}
-    ${inp('deadline','Deadline',t.deadline||'',{type:'date',attrs:lock?'readonly':''})}${inp('submitted',g?'Ngày hoàn thành <small class="muted">(áp dụng cho cả nhóm)</small>':'Ngày hoàn thành',t.submitted||'',{type:'date',attrs:glock?'readonly':''})}
+    ${inp('deadline',dlock?'Deadline <small class="muted">🔒 đã khoá, cần dời thì nhờ quản lý</small>':`Deadline${!mg?' <small class="muted">(lưu xong sẽ khoá, không sửa được)</small>':''}`,t.deadline||'',{type:'date',attrs:dlock?'readonly aria-readonly="true"':''})}${inp('submitted',g?'Ngày hoàn thành <small class="muted">(áp dụng cho cả nhóm)</small>':'Ngày hoàn thành',t.submitted||'',{type:'date',attrs:glock?'readonly':''})}
     ${mg?`<div class="f full"><span>Tag</span><div class="tgs">${Object.entries(TAGS).map(([k,l])=>`<label class="chk"><input type="checkbox" name="tag_${k}" ${tg.includes(k)?'checked':''}> <span class="pf tg ${k}">${l}</span></label>`).join('')}</div></div>`:''}
     ${mateBlk}
     <div class="f full"><span>Điểm (tự động tính)</span><div class="hint scp" id="kt-prev" aria-live="polite">–</div></div>
@@ -240,6 +241,7 @@ function ktSave(form){
   if(id&&!cur)return fail('Việc này không còn tồn tại. Hãy đóng hộp thoại và thử lại.');
   if(!assign&&!canTask(e,cur))return fail('Bạn không có quyền sửa việc này.');
   if(!mg&&byMgr(cur)){d.title=cur.title;d.deadline=cur.deadline||null}
+  if(!mg&&cur&&cur.deadline)d.deadline=cur.deadline;   /* deadline đã khoá với nhân viên */
   if(!mg&&g0&&g0.locked){d.title=g0.title||cur.title;d.submitted=g0.submitted||null;if(!cur.carriedFrom)d.deadline=g0.deadline||null}
   if(!d.title)return fail('Nhập nội dung công việc.');
   if(!(cur&&d.weight===+cur.weight)&&!wOk(d.weight))return fail(`Trọng số là số nguyên từ ${W_MIN} đến ${W_MAX}.`);

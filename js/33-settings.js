@@ -27,6 +27,7 @@ PAGES['help/rules']={t:'Quy chế KPI',
   r(){return `<div class="grid g2">
     ${card('Cách tính điểm',miniTable(['Mục','Quy tắc'],[
       ['Trọng số',`Nhân viên tự chấm cho từng việc theo thang <b>${W_MIN}–${W_MAX}</b> (số nguyên). Tổng trọng số chuẩn của một tháng là 100.`],
+      ['Deadline','Nhân viên nhập deadline khi thêm việc; lưu xong là khoá, không tự sửa được. Cần dời deadline thì quản lý sửa, hoặc chuyển việc sang tháng sau.'],
       ['Số ngày trễ','So Ngày hoàn thành với Deadline. Hoàn thành <b>trễ</b>: tính đủ ngày lịch (kể cả Chủ nhật, lễ). Hoàn thành <b>sớm</b>: chỉ tính ngày làm việc (bỏ Thứ 7, Chủ nhật, ngày lễ).'],
       ['Điểm cơ bản',`100 điểm, trễ 1 ngày trừ ${LATE_PENALTY} điểm, không thấp hơn 0.`],
       ['Điểm thưởng (tự động)',`Sớm 1 ngày làm việc cộng ${BONUS_PER_DAY} điểm, tối đa ${BONUS_CAP}. Tính tự động, không nhập tay.`],
@@ -48,7 +49,7 @@ PAGES['set/users']={t:'User / Permission',
   r(){
     const adm=can('admin');
     return `<div class="bar"><div class="sp"></div>${adm?'<button class="btn acc" data-act="user-new">＋ Thêm người dùng</button>':''}</div>`+
-    table([{h:CLOUD?'Email':'Tên đăng nhập',f:u=>`<b>${esc(u.username)}</b>`},{h:'Họ tên',f:u=>esc(u.name)},{h:'Vai trò',f:u=>badge(u.role==='admin'?'bad':u.role==='member'?'info':'ok',ROLES[u.role]||'Chưa cấp quyền')},{h:'Gắn với nhân viên',f:u=>u.empId&&empOf(u.empId)?empLink(empOf(u.empId)):u.role==='staff'?'<span class="tag-bad">Chưa gắn</span>':'<span class="muted">—</span>'},{h:'Trạng thái',f:u=>u.active?badge('ok','Đang hoạt động'):badge('mute','Đã khoá')},actCol(u=>adm?`<button class="btn sm" data-act="user-edit" data-id="${u.id}">Sửa</button>${CLOUD?` <button class="btn sm" data-act="user-reset" data-id="${u.id}" title="Gửi email đặt lại mật khẩu">Đặt lại MK</button>`:(u.id!==session.id?` <button class="btn sm danger" data-act="user-del" data-id="${u.id}">Xoá</button>`:'')}`:'')],db.users)+
+    table([{h:CLOUD?'Email':'Tên đăng nhập',f:u=>`<b>${esc(u.username)}</b>`},{h:'Họ tên',f:u=>esc(u.name)},{h:'Vai trò',f:u=>badge(u.role==='admin'?'bad':u.role==='member'?'info':'ok',ROLES[u.role]||'Chưa cấp quyền')},{h:'Gắn với nhân viên',f:u=>u.empId&&empOf(u.empId)?empLink(empOf(u.empId)):u.role==='staff'?'<span class="tag-bad">Chưa gắn</span>':'<span class="muted">—</span>'},{h:'Trạng thái',f:u=>u.active?badge('ok','Đang hoạt động'):badge('mute','Đã khoá')},actCol(u=>adm?`<button class="btn sm" data-act="user-edit" data-id="${u.id}">Sửa</button>${CLOUD?` <button class="btn sm" data-act="user-reset" data-id="${u.id}" title="Gửi email đặt lại mật khẩu">Đặt lại MK</button>`:''}${u.id!==session.id&&u.role!=='admin'?` <button class="btn sm danger" data-act="user-del" data-id="${u.id}" aria-label="Xoá người dùng ${esc(u.username)}">Xoá</button>`:''}`:'')],db.users.filter(u=>!u.deleted),{empty:'Chưa có người dùng nào.'})+
     card('Phân quyền theo vai trò',miniTable(['Chức năng','Admin','Quản lý','Nhân viên'],[['Xem dashboard, công việc, báo cáo','✔ tất cả','✔ tất cả','Chỉ của chính mình'],['Xem danh sách nhân viên, xếp hạng, theo nhóm','✔','✔','—'],['Thêm / sửa việc, tự chấm trọng số, chuyển việc sang tháng sau','✔ mọi người','✔ mọi người','Việc của mình (chưa được Duyệt)'],['Giao việc (By Manager) cho 1 hoặc nhiều người, gắn tag Ưu tiên / Quan trọng','✔','✔','—'],['Thêm người làm chung','✔ thêm ngay','✔ thêm ngay','Gửi lời mời, người được mời tự bấm Nhận'],['Duyệt / Re-check, Comment by Manager, nhận xét, dời deadline khi chuyển việc','✔','✔','—'],['Thêm / sửa / xoá nhân viên, nhập Excel KPI','✔','—','—'],['Settings: nhóm, ngày lễ, người dùng, sao lưu / khôi phục','✔','—','—']].map(r=>`<tr><td>${r[0]}</td><td class="c">${r[1]}</td><td class="c">${r[2]}</td><td class="c">${r[3]}</td></tr>`))+(CLOUD?'<p class="note">Chế độ Firebase: quyền được kiểm tra ở máy chủ bằng Firestore Security Rules (file firestore.rules).</p>':'<p class="note">Chế độ cục bộ: phân quyền chỉ giúp hạn chế thao tác nhầm trên máy này. Trên máy này mọi dữ liệu vẫn nằm chung trong trình duyệt. Muốn mỗi nhân viên thật sự chỉ đọc được việc của mình và cả phòng dùng chung dữ liệu, hãy bật Firebase.</p>'));
   }};
 function userForm(id){
@@ -70,7 +71,7 @@ SUB['user-save']=form=>{
   });
   if(ok){closeModal();shell();render(true);toast('Đã lưu')}
 };
-ACT['user-del']=el=>{const id=el.dataset.id;if(id===session.id)return;if(confirm('Xoá người dùng này?'))transact(()=>{db.users=db.users.filter(u=>u.id!==id);if(!db.users.some(x=>x.role==='admin'&&x.active))throw new Error('Phải còn ít nhất một Admin đang hoạt động.')})&&done('Đã xoá')};
+ACT['user-del']=el=>{const id=el.dataset.id,u=by(db.users,id);if(!u||id===session.id||u.role==='admin'||!can('admin'))return;if(CLOUD)return cloudUserDel(u);if(confirm(`Xoá người dùng ${u.username}?`))transact(()=>{db.users=db.users.filter(u=>u.id!==id);if(!db.users.some(x=>x.role==='admin'&&x.active))throw new Error('Phải còn ít nhất một Admin đang hoạt động.')})&&done('Đã xoá')};
 
 /* ---------- hệ thống / sao lưu ---------- */
 PAGES['set/system']={t:'Sao lưu & Hệ thống',

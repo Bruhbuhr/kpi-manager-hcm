@@ -65,6 +65,7 @@ async function bootSession(u){
     const snap=await fbStore.collection('users').doc(u.uid).get();
     if(!snap.exists){toast('Tài khoản chưa được cấp quyền. Hãy liên hệ Admin.','error');await fbAuth.signOut();return}
     const p=snap.data();
+    if(p.deleted){toast('Tài khoản đã bị xoá. Hãy liên hệ Admin.','error');await fbAuth.signOut();return}
     if(p.active===false){toast('Tài khoản đã bị khoá.','error');await fbAuth.signOut();return}
     if(!ROLES[p.role]){toast('Tài khoản chưa được cấp vai trò. Hãy liên hệ Admin.','error');await fbAuth.signOut();return}
     session={id:u.uid,name:p.name||u.email,role:p.role,username:u.email,empId:p.empId||''};
@@ -100,7 +101,7 @@ function startSync(){
   }else SYNC.forEach(col=>unsubs.push(fbStore.collection(col).onSnapshot(s=>{applyRemote(col,s.docChanges());mark(col)},col==='groups'?e=>{softFail(e);mark(col)}:fail)));
   unsubs.push(fbStore.doc('config/company').onSnapshot(s=>{if(s.exists){const d=s.data();remoteCfg.company=canon(d);db.company={...db.company,...d};scheduleRender()}mark('company')},fail));
   unsubs.push(fbStore.doc('config/seq').onSnapshot(s=>{if(s.exists){const d=s.data();remoteCfg.seq=canon(d);for(const k in d)db.seq[k]=Math.max(db.seq[k]||0,+d[k]||0)}mark('seq')},fail));
-  const uMap=(id,d)=>({id,username:d.email||'',name:d.name||'',role:d.role,empId:d.empId||'',active:d.active!==false});
+  const uMap=(id,d)=>({id,username:d.email||'',name:d.name||'',role:d.role,empId:d.empId||'',active:d.active!==false,deleted:!!d.deleted});
   if(session.role==='admin')unsubs.push(fbStore.collection('users').onSnapshot(s=>{db.users=s.docs.map(d=>uMap(d.id,d.data()));scheduleRender();mark('users')},fail));
   else unsubs.push(fbStore.doc('users/'+session.id).onSnapshot(s=>{db.users=s.exists?[uMap(s.id,s.data())]:[];mark('users')},fail));
 }
@@ -224,11 +225,25 @@ async function cloudUserSave(form){
       await fbStore.doc('users/'+id).update({name:d.name.trim(),role,empId,active:!!d.active});
       if(id===session.id){session.empId=empId;session.name=d.name.trim();closeModal();shell();render(true);toast('Đã lưu');return}
     }else{
-      const email=d.username.trim().toLowerCase(),uid=await createAuthUser(email,d.password);
+      const email=d.username.trim().toLowerCase(),old=db.users.find(x=>x.username.toLowerCase()===email);
+      if(old&&!old.deleted)throw new Error('Email này đã có tài khoản trong danh sách.');
+      if(old){   /* email từng bị xoá: khôi phục tài khoản cũ, gửi email đặt lại mật khẩu */
+        await fbStore.doc('users/'+old.id).update({name:d.name.trim(),role,empId,active:true,deleted:false});
+        try{await fbAuth.sendPasswordResetEmail(email)}catch(x){}
+        closeModal();toast('Email này từng có tài khoản: đã mở lại và gửi email đặt lại mật khẩu tới '+email);return;
+      }
+      let uid;
+      try{uid=await createAuthUser(email,d.password)}catch(x){if(x&&x.code==='auth/email-already-in-use')throw new Error('Email này đã có tài khoản đăng nhập trên Firebase. Hãy xoá nó ở Firebase Console → Authentication rồi thêm lại.');throw x}
       await fbStore.doc('users/'+uid).set({email,name:d.name.trim(),role,empId,active:true});
     }
     closeModal();toast('Đã lưu');
   }catch(e){toast(authMsg(e),'error')}
+}
+/* Xoá người dùng: tài khoản không vào được app nữa và biến khỏi danh sách. Tài khoản đăng nhập trên Firebase Authentication
+   vẫn còn (trình duyệt không xoá được tài khoản của người khác); thêm lại đúng email này thì tài khoản được mở lại. */
+async function cloudUserDel(u){
+  if(!confirm(`Xoá người dùng ${u.username}?\nNgười này sẽ không đăng nhập vào app được nữa. Dữ liệu KPI của nhân viên được gắn vẫn giữ nguyên.`))return;
+  try{await fbStore.doc('users/'+u.id).update({active:false,deleted:true,empId:''});toast('Đã xoá người dùng '+u.username)}catch(e){toast(authMsg(e),'error')}
 }
 ACT['user-reset']=async el=>{const u=by(db.users,el.dataset.id);if(!u)return;try{await fbAuth.sendPasswordResetEmail(u.username);toast('Đã gửi email đặt lại mật khẩu tới '+u.username)}catch(e){toast(authMsg(e),'error')}};
 

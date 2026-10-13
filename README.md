@@ -15,6 +15,7 @@ Chế độ dùng thử (chưa bật Firebase) đăng nhập bằng `admin` / `a
 - **Dashboard**: KPI trung bình, KPI tháng gần nhất, tỷ lệ hoàn thành đúng hạn, xếp loại; biểu đồ KPI theo tháng; bảng việc quá hạn, việc chờ chuyển tháng, việc **chờ quản lý duyệt** và việc **Re-check**; ma trận nhân viên × 12 tháng.
 - **Xếp hạng nhân viên** theo **tháng / quý / năm**: biểu đồ cột xếp từ cao xuống thấp, biểu đồ thứ hạng qua các tháng hoặc các quý, cột “so với kỳ trước” (▲ ▼).
 - **Nhân viên**: danh sách, lọc theo nhóm / năm; trang riêng từng người có **biểu đồ Tháng / Quý / Năm** (trục 0–130, vạch xếp loại 80 / 100 / 120, tooltip, nhãn giá trị) và **bảng việc từng tháng** đúng các cột của file Excel KPI: Trọng số · Deadline · Ngày hoàn thành · Điểm cơ bản · Điểm thưởng (tự động) · Điểm thành phần · Quản lý duyệt · Ghi chú.
+- **Deadline** do nhân viên nhập khi thêm việc; lưu xong là khoá với nhân viên (chỉ Admin / Quản lý sửa được).
 - **Trọng số** do nhân viên tự chấm cho từng việc theo thang **1–10** (số nguyên).
 - **Quản lý duyệt** ngay trên bảng: **Duyệt** → điểm thành phần được tính vào KPI; **Re-check** → không tính điểm, dòng việc báo đỏ (nhân viên sửa lại thì việc quay về Chờ duyệt); **Chờ duyệt** → chưa tính. Có nút duyệt hàng loạt theo tháng, theo năm của một nhân viên, hoặc tất cả ở Tổng quan.
 - **Giao việc (By Manager)**: Admin / Quản lý bấm **Giao việc** ở trang nhân viên hoặc danh sách nhân viên; việc được gắn nhãn **By Manager**, có thể gắn tag **Ưu tiên**, **Quan trọng**. Trọng số, deadline nhập như Thêm việc. Nhân viên cập nhật Ngày hoàn thành, Ghi chú, trọng số; không đổi được nội dung, deadline và không xoá được.
@@ -78,6 +79,7 @@ Các file `js/` được nạp **theo thứ tự số**. Khi cập nhật, đổ
 | Thêm / sửa / xoá nhân viên, nhập Excel KPI | ✔ | — | — |
 | Settings: nhóm, ngày lễ, người dùng, sao lưu / khôi phục | ✔ | — | — |
 
+- **Xoá người dùng** (Admin, ở User / Permission): người bị xoá không đăng nhập vào app được nữa và biến khỏi danh sách; dữ liệu KPI của nhân viên được gắn vẫn giữ. Ở chế độ Firebase, tài khoản đăng nhập trên Firebase Authentication vẫn còn (xoá hẳn ở Firebase Console nếu muốn); thêm lại đúng email đó thì tài khoản được mở lại và gửi email đặt lại mật khẩu.
 - **Admin** là duy nhất: `ahntuan13@gmail.com` (khai báo ở `config/firebase-config.js` và `firestore.rules`). Admin tạo tài khoản cho Quản lý và Nhân viên ở Settings → User / Permission.
 - Admin (và Quản lý) cũng là nhân viên: ở User / Permission, bấm Sửa tài khoản của mình rồi chọn **Gắn với nhân viên** để có mục **KPI của tôi**.
 - **Nhân viên** phải được **gắn với một nhân viên** trong danh sách; họ chỉ thấy KPI, công việc, báo cáo của người đó. Gõ thẳng địa chỉ trang khác cũng bị đưa về “KPI của tôi”.
