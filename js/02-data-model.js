@@ -21,7 +21,6 @@ const AP={'':['mute','Chờ duyệt'],ok:['ok','Duyệt'],recheck:['bad','Re-che
 const AP_VAL={'':'',ok:'Duyệt',recheck:'Re-check'};
 /* Xếp loại: [ngưỡng, màu badge, nhãn] */
 const GRADES=[[120,'ok','Xuất sắc'],[100,'info','Tốt'],[80,'mute','Đạt'],[-1e9,'bad','Cần cải thiện']];
-const DELAYS_RE=/\bdelays?\b/i;
 const EMP_COLORS=['#2f7de1','#0e9f8b','#ec6a5e','#6c5ce7','#e29a2d','#d6447a','#22b8c9','#64748b'];
 
 function defaultDB(){return{
@@ -81,10 +80,10 @@ function scoreTask(t,today=todayStr()){
   r.counted=r.ap==='ok';   /* chỉ việc đã Duyệt mới góp điểm vào KPI */
   return r;
 }
-/* Việc chưa hoàn thành là chuyển sang tháng sau được (không còn bắt buộc ghi "delays").
-   Chữ "delays" ở Ghi chú chỉ còn là dấu đề nghị dời việc: việc đó được liệt kê ở Tổng quan. */
+/* Việc chưa hoàn thành (chưa có Ngày hoàn thành, chưa chuyển) là chuyển sang tháng sau được, bằng nút trong hộp Sửa việc. */
 const canCarry=(t,sc)=>sc.comp==null&&sc.state!=='moved'&&!t.submitted;
-const hasDelays=t=>DELAYS_RE.test((t&&t.note)||'');
+/* Tháng đã kết thúc chưa (việc của tháng đó còn dang dở thì nên chuyển sang tháng sau) */
+const monthEnded=(y,mm)=>`${y}-${mm}`<todayStr().slice(0,7);
 /* Việc do quản lý giao (By Manager) và tag của việc */
 const TAGS={pri:'★ Ưu tiên',imp:'◆ Quan trọng'};
 const byMgr=t=>!!t&&t.by==='manager';
@@ -95,14 +94,13 @@ function monthStats(m){
   const rows=((m&&m.tasks)||[]).map(t=>({t,sc:scoreTask(t)}));
   /* scored = việc đã hoàn thành (có deadline + ngày hoàn thành) · counted = đã Duyệt · pending = chờ duyệt · recheck = Re-check
      kpi = điểm chính thức (chỉ việc đã Duyệt) · self = điểm tự chấm (đã Duyệt + chờ duyệt, không gồm Re-check) */
-  const st={rows,n:0,weight:0,raw:0,rawSelf:0,bonus:0,scored:0,counted:0,pending:0,recheck:0,ontime:0,early:0,late:0,open:0,nodate:0,overdue:0,moved:0,delays:0,kpi:null,self:null};
+  const st={rows,n:0,weight:0,raw:0,rawSelf:0,bonus:0,scored:0,counted:0,pending:0,recheck:0,ontime:0,early:0,late:0,open:0,nodate:0,overdue:0,moved:0,kpi:null,self:null};
   for(const {t,sc} of rows){
     if(sc.state==='moved'){st.moved++;continue}
     st.n++;st.weight+=sc.w;st[sc.state]++;
     if(sc.comp!=null){st.scored++;
       if(sc.ap==='ok'){st.counted++;st.raw+=sc.comp;st.bonus+=sc.bonus}else if(sc.ap==='recheck')st.recheck++;else st.pending++;
       if(sc.ap!=='recheck')st.rawSelf+=sc.comp}
-    if(canCarry(t,sc)&&hasDelays(t))st.delays++;
   }
   st.weight=r2(st.weight);
   const cap=v=>Math.min(KPI_CAP,Math.max(0,v));
@@ -123,7 +121,7 @@ function yearStats(sheet){
   const maxI=ev.length?ev.reduce((a,b)=>months[b].kpi>months[a].kpi?b:a):null,minI=ev.length?ev.reduce((a,b)=>months[b].kpi<months[a].kpi?b:a):null;
   const scored=tot('scored'),onTime=tot('ontime')+tot('early');
   return{months,ev,avg:avgOf(vals),maxI,minI,quarters,ytd,last:ev.length?ev[ev.length-1]:null,
-    scored,onTime,onPct:scored?onTime/scored*100:null,late:tot('late'),open:tot('open')+tot('nodate'),overdue:tot('overdue'),delays:tot('delays'),pending:tot('pending'),recheck:tot('recheck'),counted:tot('counted'),tasks:tot('n')};
+    scored,onTime,onPct:scored?onTime/scored*100:null,late:tot('late'),open:tot('open')+tot('nodate'),overdue:tot('overdue'),moved:tot('moved'),pending:tot('pending'),recheck:tot('recheck'),counted:tot('counted'),tasks:tot('n')};
 }
 const gradeOf=v=>v==null?null:GRADES.find(g=>v>=g[0]);
 const mVal=m=>m.kpi??m.kpiProv??null;   /* điểm tháng, kể cả tạm tính */
@@ -226,7 +224,7 @@ function moveTasks(empId,year,mm,ids,newDeadline){
       if(!ids.includes(t.id))return;const sc=scoreTask(t);
       if(!canCarry(t,sc))throw new Error(`Việc “${t.title.split('\n')[0]}” đã hoàn thành hoặc đã được chuyển, không chuyển được.`);
       const c={id:uid('t'),title:t.title,weight:t.weight,deadline:newDeadline||t.deadline||null,submitted:null,approval:'',
-        note:(t.note||'').replace(/\s*\bdelays?\b\s*/ig,' ').trim(),carriedFrom:{year:+year,month:mm,id:t.id,deadline:t.deadline||null}};
+        note:t.note||'',carriedFrom:{year:+year,month:mm,id:t.id,deadline:t.deadline||null}};
       if(t.gid)c.gid=t.gid;   /* việc làm chung: chỉ chuyển phần của người này, vẫn thuộc nhóm */
       if(byMgr(t)){c.by='manager';c.byName=t.byName||'';c.byAt=t.byAt||''}
       if(tagsOf(t).length)c.tags=tagsOf(t);
