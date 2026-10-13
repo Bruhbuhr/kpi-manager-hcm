@@ -95,7 +95,7 @@ function chart(id,cfg){
   const c=document.getElementById(id);if(!c)return;
   if(!window.Chart){c.parentElement.innerHTML='<div class="empty">Chưa tải được thư viện biểu đồ (Chart.js).</div>';return}
   Chart.defaults.font.family="'Be Vietnam Pro',system-ui,sans-serif";
-  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)Chart.defaults.animation=false;else if(Chart.defaults.animation)Chart.defaults.animation.duration=350;   /* tôn trọng thiết lập giảm chuyển động */Chart.defaults.color='#6b7394';Chart.defaults.borderColor='#e6e9f2';
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)Chart.defaults.animation=false;else if(Chart.defaults.animation)Chart.defaults.animation.duration=350;   /* tôn trọng thiết lập giảm chuyển động */Chart.defaults.color=CC.lbl;Chart.defaults.borderColor=CC.grid;
   ui.charts.push(new Chart(c,cfg));
 }
 function destroyCharts(){ui.charts.forEach(c=>{try{c.destroy()}catch(e){}});ui.charts=[]}

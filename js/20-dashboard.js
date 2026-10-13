@@ -40,11 +40,11 @@ const padR=w=>w<420?6:86;
 const kpiBands={id:'kpiBands',
   resize(c,a){const p=c.options.layout&&c.options.layout.padding;if(p&&typeof p==='object')p.right=padR(a.size.width)},
   beforeDatasetsDraw(c){const y=c.scales.y,a=c.chartArea,x=c.ctx;if(!y||!a)return;x.save();x.lineWidth=1;x.font="11px 'Be Vietnam Pro',system-ui,sans-serif";x.textAlign='left';x.textBaseline='middle';
-    [[80,'Đạt 80'],[100,'Tốt 100'],[120,'Xuất sắc 120']].forEach(([v,l])=>{const py=y.getPixelForValue(v);x.setLineDash([4,4]);x.strokeStyle='#b4bdd2';x.beginPath();x.moveTo(a.left,py);x.lineTo(a.right,py);x.stroke();x.setLineDash([]);if(c.width-a.right>60){x.fillStyle='#6b7394';x.fillText(l,a.right+8,py)}});x.restore()},
+    [[80,'Đạt 80'],[100,'Tốt 100'],[120,'Xuất sắc 120']].forEach(([v,l])=>{const py=y.getPixelForValue(v);x.setLineDash([4,4]);x.strokeStyle=CC.band;x.beginPath();x.moveTo(a.left,py);x.lineTo(a.right,py);x.stroke();x.setLineDash([]);if(c.width-a.right>60){x.fillStyle=CC.lbl;x.fillText(l,a.right+8,py)}});x.restore()},
   afterDatasetsDraw(c){const x=c.ctx;x.save();x.font="600 11px 'Be Vietnam Pro',system-ui,sans-serif";x.textAlign='center';x.textBaseline='bottom';x.lineJoin='round';
     c.data.datasets.forEach((ds,di)=>{if(!ds.showVal)return;const meta=c.getDatasetMeta(di);if(meta.hidden)return;const n=ds.data.filter(v=>v!=null).length,few=c.chartArea.width/Math.max(1,ds.data.length)<44;
       const vals=ds.data.map(v=>v==null?-1:v),mx=vals.indexOf(Math.max(...vals)),last=ds.data.reduce((a,v,i)=>v==null?a:i,-1);
-      meta.data.forEach((el,i)=>{const v=ds.data[i];if(v==null)return;if(ds.showVal==='last'?i!==last:(few&&n>4&&i!==mx&&i!==last))return;const t=fmtK(v);x.strokeStyle='#fff';x.lineWidth=3;x.strokeText(t,el.x,el.y-5);x.fillStyle='#1f2544';x.fillText(t,el.x,el.y-5)})});x.restore()}};
+      meta.data.forEach((el,i)=>{const v=ds.data[i];if(v==null)return;if(ds.showVal==='last'?i!==last:(few&&n>4&&i!==mx&&i!==last))return;const t=fmtK(v);x.strokeStyle='#fff';x.lineWidth=3;x.strokeText(t,el.x,el.y-5);x.fillStyle=CC.ink;x.fillText(t,el.x,el.y-5)})});x.restore()}};
 const kpiScale=()=>({min:0,max:KPI_CAP,afterBuildTicks:s=>{s.ticks=[0,40,80,100,120,130].map(value=>({value}))},grid:{display:false},border:{display:false},ticks:{callback:v=>v}});
 const kpiOpt=(extra={})=>baseOpt({layout:{padding:{right:86,top:22}},scales:{y:kpiScale(),x:{grid:{display:false}}},...extra});
 const barColors=d=>d.map(v=>v!=null&&v<80?CC.low:CC.bar);
