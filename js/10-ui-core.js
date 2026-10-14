@@ -7,13 +7,13 @@
    ===================================================================== */
 const ui={key:'',f:{},open:{},charts:[],cur:null};
 /* Ghi công tác giả – hiện ở menu trái, cuối mỗi trang, màn hình đăng nhập và báo cáo in */
-const CREDIT='🔧 KPI Manager HCM · chỉ dùng trong nội bộ';
+const CREDIT='📒 Sổ tay công việc · chỉ dùng trong nội bộ';
 const creditHTML=(cls='credit')=>`<div class="${cls}">${esc(CREDIT)}</div>`;
 const PAGES={},ACT={},SUB={};
 let PAGE=null,S=null,T=null,IMP=null;
 const F=()=>(ui.f[ui.key]??={});
 const badge=(t,x)=>`<span class="bd ${t}">${esc(x)}</span>`;
-const logoBlock=()=>typeof LOGO_DATA!=='undefined'?`<img class="lm-img" src="${LOGO_DATA}" alt="KPI">`:'<div class="lm">KPI</div>';
+const logoBlock=()=>typeof LOGO_DATA!=='undefined'?`<img class="lm-img" src="${LOGO_DATA}" alt="Sổ tay công việc">`:'<div class="lm">Sổ</div>';
 const PAL=['#2f7de1','#0e9f8b','#e29a2d','#6c5ce7','#ec6a5e','#22b8c9','#d6447a','#64748b','#84b33a','#9b7bf0'];
 /* Màu biểu đồ theo ý nghĩa */
 const CC={bar:'#2f7de1',low:'#dc4f47',line:'#0e9f8b',prev:'#a3abc4',xs:'#0e9f8b',tot:'#2f7de1',dat:'#a3abc4',cct:'#dc4f47'};

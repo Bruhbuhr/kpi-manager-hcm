@@ -4,7 +4,7 @@
 
 /* ---------- sidebar / shell / router ---------- */
 function sideHTML(){
-  return `<div class="brand">${typeof LOGO_DATA!=='undefined'?`<img class="lg" src="${LOGO_DATA}" alt="KPI">`:'<div class="lg-t">KPI</div>'}<div><b>Quản lý KPI</b><span>${esc(db.company.name||'')}</span></div></div><nav class="nav">`+
+  return `<div class="brand">${typeof LOGO_DATA!=='undefined'?`<img class="lg" src="${LOGO_DATA}" alt="Sổ tay công việc">`:'<div class="lg-t">Sổ</div>'}<div><b>Sổ tay công việc</b><span>${esc(db.company.name||'')}</span></div></div><nav class="nav">`+
   menu().map(g=>{
     const items=g.items;
     const active=ui.key.startsWith(g.g+'/');
@@ -32,7 +32,7 @@ function render(keep){
   $('#side').innerHTML=sideHTML();
   const g=MENU.find(x=>x.g===h.split('/')[0]);
   $('#crumb').textContent=g?`${g.icon} ${g.label}`:'';
-  $('#ptitle').textContent=PAGE.t;document.title=`${PAGE.t} – Quản lý KPI`;
+  $('#ptitle').textContent=PAGE.t;document.title=`${PAGE.t} – Sổ tay công việc`;
   destroyCharts();
   const sy=window.scrollY;
   try{
@@ -48,7 +48,7 @@ window.addEventListener('hashchange',()=>render(false));
 /* ---------- đăng nhập ---------- */
 function loginView(){
   if(CLOUD)return cloudLoginView();
-  $('#app').innerHTML=`<div class="login"><form class="lcard" data-submit="login">${logoBlock()}<h1>Quản lý KPI</h1><p>Đánh giá công việc nhân viên theo tháng · quý · năm</p>${inp('username','Tên đăng nhập','',{req:1,attrs:'autocomplete="username" autofocus'})}${inp('password','Mật khẩu','',{type:'password',req:1,attrs:'autocomplete="current-password"'})}<button class="btn primary block">Đăng nhập</button><div class="hint">Chế độ dùng thử trên máy này. Tài khoản mặc định: <b>admin</b> / <b>admin123</b>. Để mỗi nhân viên chỉ thấy việc của mình một cách bảo mật, cần bật Firebase.</div><button type="button" class="lnk" data-act="fb-config">Kết nối Firebase để dùng chung dữ liệu…</button></form>${creditHTML('login-credit')}</div>`;
+  $('#app').innerHTML=`<div class="login"><form class="lcard" data-submit="login">${logoBlock()}<h1>Sổ tay công việc</h1><p>Ghi việc mỗi ngày, xem KPI theo tháng · quý · năm</p>${inp('username','Tên đăng nhập','',{req:1,attrs:'autocomplete="username" autofocus'})}${inp('password','Mật khẩu','',{type:'password',req:1,attrs:'autocomplete="current-password"'})}<button class="btn primary block">Đăng nhập</button><div class="hint">Chế độ dùng thử trên máy này. Tài khoản mặc định: <b>admin</b> / <b>admin123</b>. Để mỗi nhân viên chỉ thấy việc của mình một cách bảo mật, cần bật Firebase.</div><button type="button" class="lnk" data-act="fb-config">Kết nối Firebase để dùng chung dữ liệu…</button></form>${creditHTML('login-credit')}</div>`;
 }
 SUB.login=form=>{
   const d=fd(form),u=db.users.find(x=>x.username.toLowerCase()===d.username.trim().toLowerCase());

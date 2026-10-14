@@ -170,7 +170,7 @@ async function commitOps(ops){
 function cloudLoginView(){
   /* Màn hình "Thiết lập lần đầu" chỉ mở khi địa chỉ có ?setup=1 (Admin dùng đúng một lần). Người dùng thường không thấy link này. */
   const canSetup=setupUrl(),setup=canSetup&&ui.loginMode==='setup';
-  $('#app').innerHTML=`<div class="login"><form class="lcard" data-submit="${setup?'fb-setup':'login'}">${logoBlock()}<h1>${setup?'Thiết lập lần đầu':'Quản lý KPI'}</h1><p>${setup?'Tạo tài khoản Admin':'Đánh giá công việc nhân viên theo tháng · quý · năm'}</p>
+  $('#app').innerHTML=`<div class="login"><form class="lcard" data-submit="${setup?'fb-setup':'login'}">${logoBlock()}<h1>${setup?'Thiết lập lần đầu':'Sổ tay công việc'}</h1><p>${setup?'Tạo tài khoản Admin':'Ghi việc mỗi ngày, xem KPI theo tháng · quý · năm'}</p>
     ${inp('username','Email',setup?ADMIN:'',{req:1,type:'email',attrs:'autocomplete="username" autofocus'+(setup&&ADMIN?' readonly':'')})}
     ${setup?inp('name','Họ tên','',{req:1}):''}
     ${inp('password','Mật khẩu'+(setup?' (tối thiểu 6 ký tự)':''),'',{type:'password',req:1,attrs:`autocomplete="${setup?'new-password':'current-password'}" ${setup?'minlength="6"':''}`})}

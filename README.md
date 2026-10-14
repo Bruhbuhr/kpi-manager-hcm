@@ -1,4 +1,6 @@
-# Quản lý KPI nhân viên – KPI Manager HCM
+# Sổ tay công việc – KPI nhân viên TVE-HCM
+
+Ứng dụng ghi việc và chấm KPI cho phòng AD & HR (repo `kpi-manager-hcm`).
 
 Web app đánh giá công việc của từng nhân viên theo **tháng / quý / năm**, dựng trên cùng kiến trúc với app **Quản lý Dự án – TPY** (menu trái, đăng nhập, phân quyền, Firebase, sao lưu, xuất Excel / PDF / In).
 Chạy thuần trình duyệt, đưa lên GitHub Pages là dùng được.
@@ -124,4 +126,4 @@ Với Firebase, quyền được kiểm tra ở máy chủ bằng `firestore.rul
 - Thanh đỏ dưới màn hình cho biết **tên file và số dòng** gây lỗi; màn hình “Thiếu file chương trình” nghĩa là quên upload một file trong `js/`.
 
 ---
-🔧 KPI Manager HCM · chỉ dùng trong nội bộ
+📒 Sổ tay công việc · chỉ dùng trong nội bộ
