@@ -7,11 +7,19 @@ PAGES['set/org']={t:'Nhóm & ngày lễ',
   r(){
     const adm=can('admin'),f=F();f.hy??=curYear();
     const hs=(db.company.holidays||[]).filter(d=>d.startsWith(f.hy)).sort(),ys=[...new Set([...(db.company.holidays||[]).map(d=>d.slice(0,4)),curYear(),String(+curYear()+1)])].sort();
-    return `<div class="grid g2">
+    const P=kpi2();
+    return `${card('Quy chế KPI 80 / 20',`<form data-submit="kpi2"><div class="fg fg3">${inp('since','Áp dụng từ tháng',P.since,{type:'month',req:1,ph:'yyyy-mm',attrs:adm?'':'readonly'})}${inp('userStd','Chuẩn trọng số Khung 2 (By User)',P.userStd,{type:'number',req:1,attrs:`min="1" max="100" ${adm?'':'readonly'}`})}${inp('lateAfter','Đi trễ khi giờ vào sau',P.lateAfter,{type:'time',req:1,attrs:adm?'':'readonly'})}${inp('perTask','Điểm mỗi việc quản lý giao',P.perTask,{type:'number',req:1,step:'0.5',attrs:`min="0" ${adm?'':'readonly'}`})}${inp('mgrMax','Tối đa phần việc quản lý giao',P.mgrMax,{type:'number',req:1,attrs:`min="0" ${adm?'':'readonly'}`})}${inp('compMax','Điểm Tuân thủ',P.compMax,{type:'number',req:1,attrs:`min="0" ${adm?'':'readonly'}`})}${inp('latePen','Trừ mỗi lần đi trễ',P.latePen,{type:'number',req:1,step:'0.5',attrs:`min="0" ${adm?'':'readonly'}`})}${inp('ncPen','Trừ mỗi lỗi NC Audit',P.ncPen,{type:'number',req:1,step:'0.5',attrs:`min="0" ${adm?'':'readonly'}`})}</div>
+      <p class="note">Các tháng trước tháng áp dụng giữ cách tính cũ (100% công việc). Đổi số ở đây thì KPI của các tháng từ tháng áp dụng được tính lại ngay.</p>${adm?'<div class="bar" style="margin:0"><button class="btn primary">Lưu quy chế</button></div>':''}</form>`)}
+    <div class="grid g2">
     ${card('Nhóm',`<form data-submit="depts"><label class="f"><span>Mỗi dòng một nhóm</span><textarea class="in" name="depts" rows="9" ${adm?'':'readonly'}>${esc((db.company.depts||[]).join('\n'))}</textarea></label><p class="note">Nhóm dùng để lọc Dashboard, báo cáo và gán cho nhân viên. Nhóm đang có nhân viên vẫn hiện ở bộ lọc kể cả khi bị xoá khỏi danh sách này.</p><div class="bar" style="margin:0"><button class="btn primary" ${adm?'':'disabled'}>Lưu nhóm</button></div></form>`)}
     ${card('Ngày nghỉ lễ',`<form data-submit="holidays"><div class="bar"><label class="fl">Năm ${fSel('hy','Năm',ys.map(v=>[v,v]))}</label><span class="muted">${hs.length} ngày</span></div><label class="f"><span>Mỗi dòng một ngày, dạng dd/mm/yyyy</span><textarea class="in" name="days" rows="9" ${adm?'':'readonly'}>${esc(hs.map(fmtDate).join('\n'))}</textarea></label><p class="note">Ngày lễ không được tính là ngày làm việc khi cộng điểm <b>hoàn thành sớm</b> (cùng với Thứ 7, Chủ nhật). Hoàn thành trễ luôn tính đủ ngày lịch. Danh sách ban đầu lấy từ sheet Holiday_VN của file KPI.</p><div class="bar" style="margin:0"><button class="btn primary" ${adm?'':'disabled'}>Lưu ngày lễ năm ${esc(f.hy)}</button></div></form>`)}
     </div>`;
   }};
+SUB.kpi2=form=>{if(!can('admin'))return toast('Chỉ Admin được sửa.','error');const d=fd(form),n=k=>Number(d[k]);
+  if(!/^\d{4}-\d{2}$/.test(d.since||''))return toast('Chọn tháng áp dụng.','error');
+  if(!/^\d{2}:\d{2}$/.test(d.lateAfter||''))return toast('Nhập giờ tính đi trễ.','error');
+  for(const k of['userStd','perTask','mgrMax','compMax','latePen','ncPen'])if(!(n(k)>=0))return toast('Các số phải từ 0 trở lên.','error');
+  if(transact(()=>{db.company.kpi2={since:d.since,lateAfter:d.lateAfter,userStd:n('userStd'),perTask:n('perTask'),mgrMax:n('mgrMax'),compMax:n('compMax'),latePen:n('latePen'),ncPen:n('ncPen')}})){rerender();toast('Đã lưu quy chế KPI')}};
 SUB.depts=form=>{if(!can('admin'))return toast('Chỉ Admin được sửa.','error');
   const list=[...new Set(fd(form).depts.split('\n').map(s=>s.trim()).filter(Boolean))];
   if(transact(()=>{db.company.depts=list})){rerender();toast('Đã lưu nhóm')}};
@@ -24,16 +32,22 @@ SUB.holidays=form=>{if(!can('admin'))return toast('Chỉ Admin được sửa.',
 
 /* ---------- quy chế KPI ---------- */
 PAGES['help/rules']={t:'Quy chế KPI',
-  r(){return `<div class="grid g2">
+  r(){const P=kpi2();return `${card(`KPI tháng = Khung 1 (20) + Khung 2 (80) · áp dụng từ T${P.since.slice(5)}/${P.since.slice(0,4)}`,miniTable(['Khung','Tối đa','Cách tính'],[
+      ['<b>Khung 1 · Quản lý giao &amp; Tuân thủ</b>',P.mgrMax+P.compMax,'Gồm 2 phần dưới đây.'],
+      ['&nbsp;&nbsp;Việc quản lý giao (By Manager)',P.mgrMax,`Mỗi việc quản lý giao được <b>Duyệt</b> = <b>${fmtK(P.perTask)} điểm</b>, cộng dần tới tối đa ${P.mgrMax}. Chỉ cộng, không trừ khi trễ; việc Re-check không tính. Việc giao không dùng trọng số.`],
+      ['&nbsp;&nbsp;Tuân thủ',P.compMax,`Bắt đầu ${P.compMax} điểm. Trừ ${fmtK(P.latePen)} điểm mỗi lần <b>đi trễ</b> (giờ vào sau ${esc(P.lateAfter)}) và ${fmtK(P.ncPen)} điểm mỗi <b>lỗi NC khi Audit</b> (quản lý nhập). Không vi phạm thì giữ nguyên ${P.compMax}; thấp nhất 0.`],
+      ['<b>Khung 2 · Công việc By User</b>',P.userStd,`Tổng điểm thành phần của các việc nhân viên tự thêm đã <b>Duyệt</b>. Tổng trọng số chuẩn của tháng là <b>${P.userStd}</b> (đúng hạn hết thì được ${P.userStd}; hoàn thành sớm có điểm thưởng).`],
+      ['<b>Khung 3 · KPI tháng</b>','100',`Khung 1 + Khung 2, khống chế từ 0 đến ${KPI_CAP}. Các tháng trước T${P.since.slice(5)}/${P.since.slice(0,4)} giữ cách tính cũ (100% công việc).`]
+    ].map(r=>`<tr><td>${r[0]}</td><td class="c">${r[1]}</td><td>${r[2]}</td></tr>`)))}<div class="grid g2">
     ${card('Cách tính điểm',miniTable(['Mục','Quy tắc'],[
-      ['Trọng số',`Nhân viên tự chấm cho từng việc theo thang <b>${W_MIN}–${W_MAX}</b> (số nguyên). Tổng trọng số chuẩn của một tháng là 100.`],
+      ['Trọng số',`Nhân viên tự chấm cho từng việc theo thang <b>${W_MIN}–${W_MAX}</b> (số nguyên). Tổng trọng số chuẩn của tháng: ${kpi2().userStd} (quy chế 80 / 20), 100 với các tháng trước đó. Việc quản lý giao không dùng trọng số.`],
       ['Deadline','Nhân viên nhập deadline khi thêm việc; lưu xong là khoá, không tự sửa được. Cần dời deadline thì quản lý sửa, hoặc chuyển việc sang tháng sau.'],
       ['Số ngày trễ','So Ngày hoàn thành với Deadline. Hoàn thành <b>trễ</b>: tính đủ ngày lịch (kể cả Chủ nhật, lễ). Hoàn thành <b>sớm</b>: chỉ tính ngày làm việc (bỏ Thứ 7, Chủ nhật, ngày lễ).'],
       ['Điểm cơ bản',`100 điểm, trễ 1 ngày trừ ${LATE_PENALTY} điểm, không thấp hơn 0.`],
       ['Điểm thưởng (tự động)',`Sớm 1 ngày làm việc cộng ${BONUS_PER_DAY} điểm, tối đa ${BONUS_CAP}. Tính tự động, không nhập tay.`],
       ['Điểm thành phần','(Điểm cơ bản × Trọng số + Điểm thưởng) / 100. Đây là điểm KPI của từng việc.'],
       ['Quản lý duyệt','<b>Duyệt</b>: điểm thành phần được tính vào KPI. <b>Re-check</b>: không tính điểm, dòng việc báo đỏ; nhân viên sửa lại thì việc quay về Chờ duyệt. <b>Chờ duyệt</b>: chưa tính điểm.'],
-      ['KPI tháng',`Tổng điểm thành phần của các việc <b>đã Duyệt</b>, khống chế từ 0 đến ${KPI_CAP}.`],
+      ['KPI tháng','Xem khung “KPI tháng = Khung 1 + Khung 2” ở trên.'],
       ['Comment by Manager','Khi chọn <b>Re-check</b>, quản lý ghi comment cho việc đó (cột cuối bảng). Nhân viên thấy comment, cập nhật lại việc; khi đó comment mờ và gạch đi, việc quay về Chờ duyệt.'],
       ['Việc làm chung','Quản lý giao 1 việc cho nhiều người, hoặc thêm người ở ô <b>Người làm chung</b> trong hộp Sửa việc (gõ tên hoặc mã NV rồi chọn). Nhân viên thêm người thì người đó nhận lời mời và tự bấm <b>Nhận</b>. Mỗi người có bản việc riêng: tự chấm trọng số, quản lý duyệt riêng. <b>Ngày hoàn thành</b> do một người ghi được áp dụng cho cả nhóm.'],
       ['Việc By Manager','Việc do quản lý giao bằng nút <b>Giao việc</b>, có thể gắn tag <b>Ưu tiên</b>, <b>Quan trọng</b>. Nhân viên cập nhật Ngày hoàn thành, Ghi chú, trọng số; không đổi nội dung, deadline và không xoá được.'],

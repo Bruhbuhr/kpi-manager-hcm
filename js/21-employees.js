@@ -11,7 +11,7 @@ PAGES['emp/list']={t:'Tất cả nhân viên',
   tbl(){
     const f=F(),y=f.year||curYear(),q=norm(f.q),st=f.st||'';
     const rows=sortedEmps().filter(e=>(!f.dept||e.dept===f.dept)&&(st==='all'||(st==='off'?e.active===false:e.active!==false))&&(!q||norm(`${e.code} ${e.name} ${e.title||''} ${e.email||''} ${e.dept||''}`).includes(q))).map(e=>({e,ys:empStats(e,y)}));
-    return table([
+    const cols=[
       {h:'Mã NV',f:r=>`<span style="white-space:nowrap">${esc(r.e.code)}</span>`,x:r=>r.e.code},
       {h:'Nhân viên',f:r=>`<span class="mem">${empAv(r.e)}<span>${empLink(r.e)}${r.e.title?`<small>${esc(r.e.title)}</small>`:''}</span></span>`,x:r=>r.e.name},
       {h:'Chức danh',xonly:1,x:r=>r.e.title||''},{h:'Email',xonly:1,x:r=>r.e.email||''},
@@ -21,9 +21,14 @@ PAGES['emp/list']={t:'Tất cả nhân viên',
       pctCol('Đúng hạn',r=>r.ys.onPct),nc('Chưa hoàn thành',r=>r.ys.open),{h:'Chờ duyệt',c:'num',f:r=>r.ys.pending?`<span class="tag-warn">${r.ys.pending}</span>`:'0',x:r=>r.ys.pending},{h:'Quá hạn',c:'num',f:r=>badNum(r.ys.overdue),x:r=>r.ys.overdue},
       {h:'Trạng thái',f:r=>r.e.active===false?badge('mute','Ngừng theo dõi'):badge('ok','Đang theo dõi'),x:r=>r.e.active===false?'Ngừng theo dõi':'Đang theo dõi'},
       actCol(r=>(can('manage')?`<button class="btn sm" data-act="kt-assign" data-e="${r.e.id}" data-y="${y}" aria-label="Giao việc cho ${esc(r.e.name)}">Giao việc</button> `:'')+(can('admin')?`<button class="btn sm" data-act="emp-edit" data-id="${r.e.id}" aria-label="Sửa thông tin ${esc(r.e.name)}">Sửa</button>`:''))
-    ],rows,{empty:db.employees.length?'Không có nhân viên nào khớp bộ lọc.':'Chưa có nhân viên nào. Bấm “Nhập Excel KPI” để đưa file KPI cá nhân vào, hoặc “Thêm nhân viên”.'});
+    ];
+    if(!rows.length)return table(cols,rows,{empty:db.employees.length?'Không có nhân viên nào khớp bộ lọc.':'Chưa có nhân viên nào. Bấm “Nhập Excel KPI” để đưa file KPI cá nhân vào, hoặc “Thêm nhân viên”.'});
+    /* mỗi nhóm một khung: Nhóm AD gồm ai, Nhóm HR gồm ai … */
+    const groups=[...depts(),''].map(d=>({d,rs:rows.filter(r=>(r.e.dept||'')===d)})).filter(g=>g.rs.length);
+    const html=groups.map(g=>`<section class="card egrp"><div class="hdr" style="align-items:baseline;margin-bottom:8px"><h4 style="margin:0">${g.d?'Nhóm '+esc(g.d):'Chưa gán nhóm'} <small class="muted">· ${g.rs.length} nhân viên</small></h4></div><p class="egm">${g.rs.map(r=>esc(r.e.name)).join(', ')}</p>${table(cols,g.rs,{meta:false})}</section>`).join('');
+    ui.cur={cols,rows};   /* Xuất Excel: cả danh sách */
+    return html;
   }};
-
 /* ---------- theo nhóm ---------- */
 function deptRows(f){
   const rows=scopeStats({year:f.year}),names=[...depts(),''];
@@ -89,17 +94,17 @@ function empPage(e){const P={t:e.name,sign:true,   /* bản in / PDF của trang
     return `${invCard}<section class="card"><div class="hdr"><div><div class="tags">${e.dept?`<span class="pf">${esc(e.dept)}</span>`:''}${e.active===false?badge('mute','Ngừng theo dõi'):''}${gradeBd(ys.avg)}</div><h2>${esc(e.name)}</h2>
       <p>Mã NV ${esc(e.code)}${e.title?' · '+esc(e.title):''}${e.email?' · '+esc(e.email):''}${sheet?' · cập nhật '+fmtDate(sheet.updatedAt):''}</p>${e.note?`<p class="desc">${esc(e.note)}</p>`:''}</div>
       ${w?`<div class="acts">${adm?`<button class="btn" data-act="emp-edit" data-id="${e.id}">Sửa thông tin</button><button class="btn" data-act="imp-open">⬆ Nhập Excel KPI</button>`:''}${mg&&ys.pending?`<button class="btn" data-act="ap-all" data-e="${e.id}" data-y="${y}">✓ Duyệt cả năm (${ys.pending} việc chờ)</button>`:''}${mg?`<button class="btn" data-act="kt-assign" ${dA}>📌 Giao việc T${mm}</button>`:''}<button class="btn acc" data-act="kt-new" ${dA}>＋ Thêm việc T${mm}</button></div>`:''}</div></section>
-    <div class="kpis">${kpi(`KPI trung bình năm ${y}`,fmtK(ys.avg),ys.avg==null?'chưa có tháng nào có điểm được duyệt':`${gradeBd(ys.avg)} · ${ys.ev.length} tháng có điểm`,gradeTone(ys.avg)||'acc')}${kpi(lq!=null?`${QN[lq]} (${QR[lq]})`:'Quý gần nhất',fmtK(lq!=null?ys.quarters[lq].avg:null),lq!=null?`trung bình ${ys.quarters[lq].n}/3 tháng`:'chưa có điểm','info')}${kpi('Cao nhất · Thấp nhất',ys.maxI!=null?`${fmtK(ys.months[ys.maxI].kpi)} · ${fmtK(ys.months[ys.minI].kpi)}`:'–',ys.maxI!=null?`T${MM[ys.maxI]} · T${MM[ys.minI]}`:'','acc')}${kpi('Hoàn thành đúng hạn',ys.onPct==null?'–':fmtK(ys.onPct)+'%',ys.scored?`${ys.onTime}/${ys.scored} việc đã hoàn thành · ${ys.late} việc trễ`:'chưa có việc hoàn thành','ok')}${kpi('Việc chưa hoàn thành',ys.open+ys.overdue,ys.overdue?`<span class="tag-bad">${ys.overdue} quá hạn</span>`:'không có việc quá hạn',ys.overdue?'bad':'ok')}${kpi('Chờ quản lý duyệt',ys.pending,ys.recheck?`<span class="tag-bad">${ys.recheck} việc Re-check · không tính điểm</span>`:ys.pending?'điểm chưa tính vào KPI':'không có việc Re-check',ys.recheck?'bad':ys.pending?'warn':'ok')}</div>
+    <div class="kpis">${kpi(`KPI trung bình năm ${y}`,fmtK(ys.avg),ys.avg==null?'chưa có tháng nào có điểm được duyệt':`${gradeBd(ys.avg)} · ${ys.ev.length} tháng có điểm`,gradeTone(ys.avg)||'acc')}${kpi(lq!=null?`${QN[lq]} (${QR[lq]})`:'Quý gần nhất',fmtK(lq!=null?ys.quarters[lq].avg:null),lq!=null?`trung bình ${ys.quarters[lq].n}/3 tháng`:'chưa có điểm','info')}${kpi('Cao nhất · Thấp nhất',ys.maxI!=null?`${fmtK(ys.months[ys.maxI].kpi)} · ${fmtK(ys.months[ys.minI].kpi)}`:'–',ys.maxI!=null?`T${MM[ys.maxI]} · T${MM[ys.minI]}`:'','acc')}${kpi('Hoàn thành đúng hạn',ys.onPct==null?'–':fmtK(ys.onPct)+'%',ys.scored?`${ys.onTime}/${ys.scored} việc đã hoàn thành · ${ys.late} việc trễ`:'chưa có việc hoàn thành','ok')}<button type="button" class="kpib ${f.focus==='open'?'on':''}" data-act="focus" data-v="open" aria-pressed="${f.focus==='open'}" title="Xem các việc chưa hoàn thành">${kpi('Việc chưa hoàn thành ›',ys.open+ys.overdue,ys.overdue?`<span class="tag-bad">${ys.overdue} quá hạn</span> · bấm để xem`:'bấm để xem danh sách',ys.overdue?'bad':'ok')}</button><button type="button" class="kpib ${f.focus==='pending'?'on':''}" data-act="focus" data-v="pending" aria-pressed="${f.focus==='pending'}" title="Xem các việc chờ quản lý duyệt">${kpi('Chờ quản lý duyệt ›',ys.pending,ys.recheck?`<span class="tag-bad">${ys.recheck} việc Re-check</span> · bấm để xem`:ys.pending?'bấm để xem danh sách':'không có việc chờ duyệt',ys.recheck?'bad':ys.pending?'warn':'ok')}</button></div>${focusCard(e,y,ys)}
     <section class="card"><div class="hdr" style="align-items:center;margin-bottom:10px"><h4 style="margin:0">${{thang:'KPI theo tháng',quy:'KPI trung bình theo quý',nam:'KPI lũy kế từ đầu năm'}[f.mode]} – ${y}</h4><div class="seg" role="group" aria-label="Kỳ hiển thị">${Object.entries(MODES).map(([k,l])=>`<button type="button" data-act="setf" data-k="mode" data-v="${k}" aria-pressed="${f.mode===k}" class="${f.mode===k?'on':''}">${l}</button>`).join('')}</div></div>
       <div class="ch"><canvas id="c1"></canvas></div>
       <p class="note">${f.mode==='thang'?'Bấm vào một cột để mở bảng việc của tháng đó. ':f.mode==='quy'?'Mỗi cột là trung bình các tháng đã có điểm trong quý. ':'Điểm cuối đường là KPI năm tính đến tháng gần nhất. '}KPI chỉ tính các việc quản lý đã <b>Duyệt</b>. Mốc xếp loại: 80 Đạt · 100 Tốt · 120 Xuất sắc · tối đa ${KPI_CAP}. Cột đỏ: dưới 80. Cột nhạt và dấu *: tháng đang diễn ra, điểm tạm tính.</p></section>
     <section class="card mcard"><div class="mstrip" role="group" aria-label="Chọn tháng">${MM.map((m,i)=>`<button type="button" data-act="setf" data-k="mm" data-v="${m}" aria-pressed="${m===mm}" class="${m===mm?'on':''}" aria-label="Tháng ${m}, ${mAria(ys.months[i])}"><b>T${m}${mMark(ys.months[i])}</b><span>${mCell(ys.months[i])}</span></button>`).join('')}</div>
-      <div class="hdr" style="margin:14px 0 10px"><div><h4 style="margin:0 0 6px">Đánh giá KPI tháng ${mm}/${y}</h4><div class="mmeta"><span class="big">${fmtK(mVal(st))}</span>${st.prov?badge('info','Tạm tính · tháng chưa kết thúc'):mVal(st)!=null?gradeBd(st.kpi):badge('mute',st.pending?'Chờ quản lý duyệt':'Chưa có điểm')}<span class="muted">${st.n} việc · ${st.scored} đã hoàn thành · ${st.counted} đã duyệt</span>${nMgr?`<span class="pf mgr">${nMgr} việc By Manager</span>`:''}${st.pending?badge('warn',`○ ${st.pending} việc chờ duyệt · nếu duyệt hết: ${fmtK2(st.self)}`):''}${st.recheck?badge('bad',`! ${st.recheck} việc Re-check · không tính điểm`):''}${st.n?(Math.abs(st.weight-100)<0.01?'<span class="muted">Tổng trọng số 100</span>':badge('warn',`! Tổng trọng số ${fmtK(st.weight)} (chuẩn 100)`)):''}${st.raw>KPI_CAP?`<span class="muted">Cộng dồn ${fmtK(st.raw)}, khống chế ở ${KPI_CAP}</span>`:''}</div></div>
+      <div class="hdr" style="margin:14px 0 10px"><div><h4 style="margin:0 0 6px">Đánh giá KPI tháng ${mm}/${y}</h4><div class="mmeta"><span class="big">${fmtK(mVal(st))}</span>${st.prov?badge('info','Tạm tính · tháng chưa kết thúc'):mVal(st)!=null?gradeBd(st.kpi):badge('mute',st.pending?'Chờ quản lý duyệt':'Chưa có điểm')}<span class="muted">${st.n} việc · ${st.scored} đã hoàn thành · ${st.counted} đã duyệt</span>${nMgr?`<span class="pf mgr">${nMgr} việc By Manager</span>`:''}${st.pending?badge('warn',`○ ${st.pending} việc chờ duyệt · nếu duyệt hết: ${fmtK2(st.self)}`):''}${st.recheck?badge('bad',`! ${st.recheck} việc Re-check · không tính điểm`):''}${(()=>{const std=st.v2?kpi2().userStd:100;return st.n?(Math.abs(st.weight-std)<0.01?`<span class="muted">Tổng trọng số ${std}</span>`:badge('warn',`! Tổng trọng số ${fmtK(st.weight)} (chuẩn ${std})`)):''})()}${st.raw>KPI_CAP?`<span class="muted">Cộng dồn ${fmtK(st.raw)}, khống chế ở ${KPI_CAP}</span>`:''}</div></div>
         <div class="acts">${st.n?`<button class="btn" data-act="sheet-print" ${dA}>🖨 In phiếu</button><button class="btn" data-act="sheet-pdf" ${dA}>Phiếu PDF</button>`:''}${w?`<button class="btn" data-act="kt-new" ${dA}>＋ Thêm việc</button>`:''}${mg?`<button class="btn" data-act="kt-assign" ${dA}>📌 Giao việc</button>`:''}${mg&&st.pending?`<button class="btn acc" data-act="ap-all" ${dA}>✓ Duyệt ${st.pending} việc chờ duyệt</button>`:''}</div></div>
       ${w&&carri.length?`<p class="hint">Tháng này còn ${carri.length} việc chưa hoàn thành. Việc nào cần dời sang ${nxL}: bấm <b>Sửa</b> ở việc đó rồi chọn <b>Chuyển sang ${nxL}</b>.</p>`:''}
-      ${(()=>{const bm=st.rows.filter(r=>byMgr(r.t)&&r.sc.state!=='moved');if(!bm.length||!session||session.empId!==e.id)return'';
+      ${st.v2?kpiFrames(e,y,mm,st):`<p class="note" style="padding-top:0">Tháng này tính theo quy chế cũ (100% công việc); quy chế 80 / 20 áp dụng từ T${kpi2().since.slice(5)}/${kpi2().since.slice(0,4)}.</p>${monthTable(e,y,mm,st)}`}
+      ${(()=>{if(st.v2)return'';const bm=st.rows.filter(r=>byMgr(r.t)&&r.sc.state!=='moved');if(!bm.length||!session||session.empId!==e.id)return'';
         return `<div class="bmlist"><b>📌 Việc quản lý giao cho bạn tháng ${mm} (${bm.length})</b><ul>${bm.map(r=>`<li>${tagsOf(r.t).map(k=>`<span class="pf tg ${k}">${TAGS[k]}</span>`).join('')}<span>${esc(r.t.title.split('\n')[0])}</span><small class="muted">${r.t.deadline?'deadline '+fmtDM(r.t.deadline,y):'chưa đặt hạn'}${r.t.byName?' · giao bởi '+esc(r.t.byName):''}</small> ${stBd(r.t,r.sc,y)}</li>`).join('')}</ul></div>`})()}
-      ${monthTable(e,y,mm,st)}
       <form class="cmt" data-submit="cmt-save" ${dA}><label class="f"><span>Nhận xét của quản lý – tháng ${mm}</span><textarea class="in" name="comment" rows="2" ${mg?'':'readonly'} placeholder="${mg?'Điểm mạnh, điểm cần cải thiện, mục tiêu tháng sau…':'Quản lý chưa nhận xét tháng này.'}">${esc(comment)}</textarea></label>${mg?'<div><button class="btn sm">Lưu nhận xét</button></div>':''}</form>
     </section>`;
   },
@@ -144,30 +149,83 @@ function mcCell(e,y,mm,r){
   if(can('manage')&&sc.ap==='recheck')return `<form class="mcf" data-submit="mc-save" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}"><textarea class="in" name="mc" rows="2" maxlength="500" data-mc placeholder="Cần sửa / bổ sung gì…" aria-label="Comment by Manager cho việc ${r.i+1}">${esc(c&&!c.done?c.text:'')}</textarea><button class="btn sm">Lưu</button></form>${c&&c.done?mcShow(c,y):''}`;
   return c?mcShow(c,y):'';
 }
-function monthTable(e,y,mm,st){
-  const w=canSheet(e.id),mg=can('manage'),rows=st.rows.map((r,i)=>({...r,i})),scd=r=>r.sc.state!=='moved'&&(r.sc.comp!=null||r.sc.ap);
-  /* Cột Comment by Manager chỉ hiện khi tháng có việc Re-check (quản lý) hoặc đã có comment */
+/* opt.kind: (không có) = cả tháng, cách tính cũ · 'user' = Khung 2 By User · 'bm' = việc quản lý giao trong Khung 1. opt.rows: các dòng của khung. */
+const focusHit=(f,r)=>f==='open'?canCarry(r.t,r.sc):f==='pending'?(r.sc.comp!=null&&r.sc.ap===''&&r.sc.state!=='moved'):false;
+function monthTable(e,y,mm,st,opt={}){
+  const w=canSheet(e.id),mg=can('manage'),kind=opt.kind||'',bm=kind==='bm',P=kpi2(),fc=F().focus||'';
+  const rows=sortRows(opt.rows||st.rows).map((r,i)=>({...r,i})),scd=r=>r.sc.state!=='moved'&&(r.sc.comp!=null||r.sc.ap);
+  /* Cột Comment by Manager chỉ hiện khi khung có việc Re-check (quản lý) hoặc đã có comment */
   const showMc=rows.some(r=>r.sc.state!=='moved'&&(mcOf(r.t)||(mg&&r.sc.ap==='recheck'))),mcX=r=>{const c=mcOf(r.t);return c?c.text+(c.done?' (nhân viên đã cập nhật)':''):''};
-  return table([
+  const bmPts=r=>r.sc.comp==null?'–':r.sc.ap==='ok'?`<b class="cp ok">+${fmtK(P.perTask)}</b>`:r.sc.ap==='recheck'?'<b class="cp recheck">0</b><small class="tag-bad">không tính</small>':`<b class="cp pend">${fmtK(P.perTask)}</b><small>chờ duyệt</small>`;
+  const cols=[
     {h:'STT',c:'num',f:r=>r.i+1,x:r=>r.i+1},
     {h:'Nội dung công việc / Đóng góp',c:'ttl',f:r=>`${r.t.carriedFrom?`<span class="pf">Chuyển từ ${mLbl(r.t.carriedFrom.month,r.t.carriedFrom.year,y)}</span>`:''}${tagBd(r.t)}${grpBd(r.t,e.id)}<span class="tt">${esc(r.t.title)}</span>`,x:r=>r.t.title},
     {h:'Giao bởi / Tag / Làm chung',xonly:1,x:r=>tagText(r.t)},
-    {h:'Trọng số',c:'num',f:r=>fmtK(r.sc.w),x:r=>r.sc.w},
+    bm?null:{h:'Trọng số',c:'num',f:r=>fmtK(r.sc.w),x:r=>r.sc.w},
     {h:'Deadline',f:r=>`<span style="white-space:nowrap">${fmtDM(r.t.deadline,y)}</span>${r.t.carriedFrom&&r.t.carriedFrom.deadline&&r.t.carriedFrom.deadline!==r.t.deadline?`<small>gốc ${fmtDM(r.t.carriedFrom.deadline,y)}</small>`:''}`,x:r=>fmtDate(r.t.deadline)},
     {h:'Ngày hoàn thành',f:r=>{const g=grpOfT(r.t);return `<span style="white-space:nowrap">${fmtDM(r.t.submitted,y)}</span>${g&&r.t.submitted&&g.doneBy&&g.doneBy.empId!==e.id?`<small title="Việc làm chung: ngày hoàn thành do ${esc(g.doneBy.name)} ghi">ghi bởi ${esc(String(g.doneBy.name).split(' ').pop())}</small>`:''}`},x:r=>fmtDate(r.t.submitted)},
     {h:'Số ngày trễ',xonly:1,x:r=>r.sc.late??''},
     {h:'Trạng thái',c:'stc',f:r=>stBd(r.t,r.sc,y),x:r=>stText(r.t,r.sc,y)},
-    {h:'Điểm cơ bản',c:'num',f:r=>r.sc.base==null?'–':fmtK(r.sc.base),x:r=>r.sc.base??''},
-    {h:'Điểm thưởng (tự động)',c:'num',f:r=>r.sc.bonus==null?'–':r.sc.bonus?`<span class="pos">+${fmtK(r.sc.bonus)}</span>`:'0',x:r=>r.sc.bonus??''},
-    {h:'Điểm thành phần',c:'num',f:r=>r.sc.comp==null?'–':`<b class="cp ${r.sc.ap||'pend'}" title="${CP_TIP[r.sc.ap]}">${fmtK2(r.sc.comp)}</b>${r.sc.ap==='recheck'?'<small class="tag-bad">không tính</small>':r.sc.ap===''?'<small>chờ duyệt</small>':''}`,x:r=>r.sc.comp==null?'':r2(r.sc.comp)},
+    bm?null:{h:'Điểm cơ bản',c:'num',f:r=>r.sc.base==null?'–':fmtK(r.sc.base),x:r=>r.sc.base??''},
+    bm?null:{h:'Điểm thưởng (tự động)',c:'num',f:r=>r.sc.bonus==null?'–':r.sc.bonus?`<span class="pos">+${fmtK(r.sc.bonus)}</span>`:'0',x:r=>r.sc.bonus??''},
+    bm?{h:'Điểm giao việc',c:'num',f:bmPts,x:r=>r.sc.comp==null?'':r.sc.ap==='ok'?P.perTask:0}
+      :{h:'Điểm thành phần',c:'num',f:r=>r.sc.comp==null?'–':`<b class="cp ${r.sc.ap||'pend'}" title="${CP_TIP[r.sc.ap]}">${fmtK2(r.sc.comp)}</b>${r.sc.ap==='recheck'?'<small class="tag-bad">không tính</small>':r.sc.ap===''?'<small>chờ duyệt</small>':''}`,x:r=>r.sc.comp==null?'':r2(r.sc.comp)},
     {h:'Quản lý duyệt',c:'apc',f:r=>apCell(e,y,mm,r),x:r=>scd(r)?AP[r.sc.ap][1]:''},
     {h:'Tính vào KPI',xonly:1,x:r=>r.sc.comp==null?'':r.sc.counted?'Có':'Không'},
     {h:'Ghi chú / Link bằng chứng',c:'nt',f:r=>r.t.note?linkify(r.t.note):'',x:r=>r.t.note||''},
     showMc?{h:'Comment by Manager',c:'mcc',f:r=>mcCell(e,y,mm,r),x:mcX}:{h:'Comment by Manager',xonly:1,x:mcX},
     actCol(r=>!w?'':r.sc.state==='moved'?`<button class="btn sm" data-act="kt-undo" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" aria-label="Hoàn tác chuyển việc ${r.i+1}">Hoàn tác</button>`
       :canTask(e.id,r.t)?`<button class="btn sm" data-act="kt-edit" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" aria-label="Sửa việc ${r.i+1}">Sửa</button>`:'<span class="muted" title="Việc đã được quản lý Duyệt, chỉ quản lý sửa được">Đã duyệt</span>')
-  ],rows,{meta:false,rc:r=>r.sc.state==='moved'?'moved':r.sc.ap==='recheck'?'recheck':'',empty:`Tháng ${mm} chưa có việc nào.${w?' Bấm “Thêm việc” để nhập việc của tháng.':''}`,
-    foot:st.n?`<tr><td colspan="2">KPI tổng tháng</td><td class="num">${fmtK(st.weight)}</td><td colspan="5"></td><td class="num">${fmtK2(mVal(st))}${st.prov?'*':''}</td><td colspan="${showMc?4:3}">${st.scored?`${st.counted}/${st.scored} việc đã duyệt`:''}</td></tr>`:''});
+  ].filter(Boolean);
+  const nVis=cols.filter(c=>!c.xonly).length,live=rows.filter(r=>r.sc.state!=='moved').length;
+  const foot=!live?'':bm
+    ?`<tr><td colspan="2">Điểm giao việc</td><td colspan="3"></td><td class="num">${fmtK(st.pMgr)}/${P.mgrMax}</td><td colspan="${nVis-6}">${st.bmOk} việc được Duyệt × ${fmtK(P.perTask)} điểm${st.bmPend?` · ${st.bmPend} việc chờ duyệt`:''}</td></tr>`
+    :`<tr><td colspan="2">${kind==='user'?'Khung 2 · By User':'KPI tổng tháng'}</td><td class="num">${fmtK(st.weight)}</td><td colspan="5"></td><td class="num">${kind==='user'?fmtK2(st.p80):fmtK2(mVal(st))+(st.prov?'*':'')}</td><td colspan="${nVis-9}">${kind==='user'?`${rows.filter(r=>r.sc.counted).length}/${rows.filter(r=>r.sc.comp!=null).length} việc đã duyệt`:st.scored?`${st.counted}/${st.scored} việc đã duyệt`:''}</td></tr>`;
+  return table(cols,rows,{meta:false,rc:r=>[r.sc.state==='moved'?'moved':r.sc.ap==='recheck'?'recheck':'',focusHit(fc,r)?'hl':''].join(' ').trim(),
+    empty:bm?`Tháng ${mm} chưa có việc nào do quản lý giao.${mg?' Bấm “Giao việc” để giao việc cho nhân viên.':''}`:`Tháng ${mm} chưa có việc nào.${w?' Bấm “Thêm việc” để nhập việc của tháng.':''}`,foot});
+}
+/* ---------- Khung 1 (Quản lý giao & Tuân thủ, 20) · Khung 2 (By User, 80) · Khung 3 (KPI tháng) ---------- */
+const lateChip=(x,mg,dA)=>`<span class="chip late" title="${x.t?'Giờ vào '+esc(x.t):''}">${fmtDate(x.d).slice(0,5)}${x.t?` <small>${esc(x.t)}</small>`:''}${mg?` <button type="button" class="x" data-act="late-x" ${dA} data-id="${x.id}" aria-label="Bỏ ngày đi trễ ${fmtDate(x.d)}">✕</button>`:''}</span>`;
+function kpiFrames(e,y,mm,st){
+  const P=kpi2(),mg=can('manage'),dA=`data-e="${e.id}" data-y="${y}" data-mm="${mm}"`,dmin=`${y}-${mm}-01`,dmax=isoOf(dayNum(`${nextOf(y,mm).year}-${nextOf(y,mm).mm}-01`)-1);
+  const bmRows=st.rows.filter(r=>byMgr(r.t)),usRows=st.rows.filter(r=>!byMgr(r.t)),k=mVal(st);
+  const lateBox=`<div class="cmpc"><div class="cmph"><span>Đi trễ <small class="muted">(giờ vào sau ${esc(P.lateAfter)})</small></span><b class="${st.lateList.length?'tag-bad':''}">${st.lateList.length} lần</b></div>
+      <div class="chips">${st.lateList.length?st.lateList.map(x=>lateChip(x,mg,dA)).join(''):'<span class="muted">Không đi trễ ngày nào.</span>'}</div>
+      ${mg?`<form class="cmpf" data-submit="late-add" ${dA}><input class="in" type="date" name="d" required min="${dmin}" max="${dmax}" aria-label="Ngày đi trễ"><input class="in" type="time" name="t" value="08:15" aria-label="Giờ vào"><button class="btn sm">＋ Thêm ngày trễ</button></form>`:''}</div>`;
+  const ncBox=`<div class="cmpc"><div class="cmph"><span>Lỗi NC khi Audit <small class="muted">(quản lý nhập)</small></span><b class="${st.ncList.length?'tag-bad':''}">${st.ncList.length} lỗi</b></div>
+      ${st.ncList.length?`<ul class="ncl">${st.ncList.map(x=>`<li><span>${fmtDate(x.d).slice(0,5)}</span> ${esc(x.note||'')}${mg?` <button type="button" class="x" data-act="nc-x" ${dA} data-id="${x.id}" aria-label="Bỏ lỗi NC ngày ${fmtDate(x.d)}">✕</button>`:''}</li>`).join('')}</ul>`:'<div class="chips"><span class="muted">Không có lỗi NC.</span></div>'}
+      ${mg?`<form class="cmpf" data-submit="nc-add" ${dA}><input class="in" type="date" name="d" required min="${dmin}" max="${dmax}" aria-label="Ngày Audit"><input class="in" name="note" required maxlength="200" placeholder="Nội dung lỗi NC" aria-label="Nội dung lỗi NC"><button class="btn sm">＋ Thêm lỗi NC</button></form>`:''}</div>`;
+  return `<section class="kf kf20"><div class="kfh"><h4>Khung 1 · Quản lý giao &amp; Tuân thủ</h4><span class="kfs"><b>${fmtK(st.p20)}</b> / ${P.mgrMax+P.compMax}</span></div>
+    <div class="kfsub"><div class="kfsh"><b>Việc quản lý giao</b><span class="muted">${fmtK(P.perTask)} điểm mỗi việc được Duyệt, không trừ khi trễ, tối đa ${P.mgrMax}</span><span class="kfs sm">${fmtK(st.pMgr)} / ${P.mgrMax}</span></div>${monthTable(e,y,mm,st,{rows:bmRows,kind:'bm'})}</div>
+    <div class="kfsub"><div class="kfsh"><b>Tuân thủ</b><span class="muted">${P.compMax} điểm, trừ ${fmtK(P.latePen)} mỗi lần đi trễ và ${fmtK(P.ncPen)} mỗi lỗi NC; không vi phạm thì giữ nguyên</span><span class="kfs sm">${fmtK(st.pComp)} / ${P.compMax}</span></div><div class="cmp">${lateBox}${ncBox}</div></div>
+  </section>
+  <section class="kf kf80"><div class="kfh"><h4>Khung 2 · Công việc By User</h4><span class="kfs"><b>${fmtK2(st.p80)}</b> / ${P.userStd}</span></div>
+    ${usRows.some(r=>r.sc.state!=='moved')&&Math.abs(st.weight-P.userStd)>=0.01?`<p class="hint">Tổng trọng số đang là <b>${fmtK(st.weight)}</b>, chuẩn là ${P.userStd}.</p>`:''}${monthTable(e,y,mm,st,{rows:usRows,kind:'user'})}
+  </section>
+  <section class="kf kftot"><div class="kfh"><h4>Khung 3 · KPI tháng ${mm}/${y}</h4><span class="kfs big"><b>${fmtK2(k)}</b>${st.prov?'*':''}</span></div>
+    <div class="kfeq"><span>${fmtK2(st.p80)} <small>Khung 2 · By User</small></span><i>+</i><span>${fmtK(st.p20)} <small>Khung 1 · Quản lý giao &amp; Tuân thủ</small></span><i>=</i><span><b>${k==null?'–':fmtK2(k)}</b> <small>KPI tháng${st.prov?' (tạm tính)':''}</small></span>${k!=null?gradeBd(st.kpi??st.kpiProv):''}</div>
+    <p class="note">${k==null?'Chưa có việc nào được quản lý Duyệt nên tháng này chưa có điểm. ':''}${st.pending?`Còn ${st.pending} việc chờ duyệt; nếu duyệt hết: ${fmtK2(st.self)}. `:''}Khống chế 0 – ${KPI_CAP}.</p>
+  </section>`;
+}
+/* nhập đi trễ / lỗi NC (chỉ quản lý) */
+function cmpEdit(form,fn){if(!can('manage'))return toast('Chỉ quản lý được nhập phần Tuân thủ.','error');const {e,y,mm}=form.dataset;
+  if(transact(()=>{const sh=sheetOf(e,y,true),m=sh.months[mm];fn(m);sh.updatedAt=todayStr()})){refreshTbl();return true}}
+SUB['late-add']=form=>{const d=fd(form),P=kpi2();
+  if(d.t&&d.t<=P.lateAfter)return toast(`Giờ vào ${d.t} không tính là đi trễ (chỉ tính sau ${P.lateAfter}).`,'error');
+  cmpEdit(form,m=>{m.late=m.late||[];if(m.late.some(x=>x.d===d.d))throw new Error('Ngày này đã ghi đi trễ rồi.');m.late.push({id:uid('l'),d:d.d,t:d.t||'',by:session?.name||'',at:todayStr()})})&&toast('Đã ghi ngày đi trễ')};
+SUB['nc-add']=form=>{const d=fd(form);if(!String(d.note||'').trim())return toast('Nhập nội dung lỗi NC.','error');
+  cmpEdit(form,m=>{(m.nc=m.nc||[]).push({id:uid('n'),d:d.d,note:d.note.trim(),by:session?.name||'',at:todayStr()})})&&toast('Đã ghi lỗi NC')};
+ACT['late-x']=el=>{if(confirm('Bỏ ngày đi trễ này?'))cmpEdit(el,m=>{m.late=(m.late||[]).filter(x=>x.id!==el.dataset.id)})};
+ACT['nc-x']=el=>{if(confirm('Bỏ lỗi NC này?'))cmpEdit(el,m=>{m.nc=(m.nc||[]).filter(x=>x.id!==el.dataset.id)})};
+/* bấm ô "Việc chưa hoàn thành" / "Chờ quản lý duyệt": mở danh sách các việc đó trong năm và tô sáng trên bảng */
+ACT.focus=el=>{const f=F(),v=el.dataset.v;f.focus=f.focus===v?'':v;refreshTbl();if(f.focus)setTimeout(()=>{const c=$('#focus-card');if(c){c.scrollIntoView({behavior:'smooth',block:'start'});c.focus({preventScroll:true})}},60)};
+function focusCard(e,y,ys){
+  const f=F().focus;if(!f)return'';
+  const list=[];ys.months.forEach((m,i)=>m.rows.forEach(r=>{if(focusHit(f,r))list.push({mm:MM[i],...r})}));
+  const ttl=f==='open'?'Việc chưa hoàn thành':'Việc chờ quản lý duyệt';
+  return `<section class="card fcard" id="focus-card" tabindex="-1"><div class="hdr" style="align-items:center;margin-bottom:8px"><h4 style="margin:0">${ttl} – năm ${y} (${list.length})</h4><button class="btn sm" data-act="focus" data-v="${f}">Đóng</button></div>
+    ${list.length?miniTable(['Tháng','Công việc','Deadline','Trạng thái',''],sortRows(list).map(r=>`<tr class="hl"><td><button type="button" class="lnk" data-act="setf" data-k="mm" data-v="${r.mm}">T${r.mm}</button></td><td>${tagBd(r.t)}${esc(r.t.title.split('\n')[0])}</td><td style="white-space:nowrap">${fmtDM(r.t.deadline,y)}</td><td>${stBd(r.t,r.sc,y)}${f==='pending'?' '+apBd(''):''}</td><td class="act">${canTask(e.id,r.t)?`<button class="btn sm" data-act="kt-edit" data-e="${e.id}" data-y="${y}" data-mm="${r.mm}" data-id="${r.t.id}">Sửa</button>`:''}</td></tr>`),'Không có việc nào.'):`<div class="note">${f==='open'?'Tất cả các việc đã hoàn thành.':'Không có việc nào đang chờ quản lý duyệt.'}</div>`}
+    <p class="note">Các dòng này cũng được tô sáng trong bảng việc của từng tháng. Bấm Đóng để bỏ tô sáng.</p></section>`;
 }
 
 /* ---------- thêm / sửa / giao việc ---------- */
@@ -180,7 +238,8 @@ function taskForm(empId,y,mm,id,opt={}){
   const ap=apOf(t),mg=can('manage'),legacy=!!id&&!wOk(+t.weight),nx=nextOf(y,mm),nxL=mLbl(nx.mm,nx.year,y),mv=!!id&&canSheet(empId)&&canCarry(t,scoreTask(t));
   if(!assign&&!canTask(empId,id?t:null))return toast(canSheet(empId)?'Việc đã được quản lý Duyệt, chỉ quản lý sửa được.':'Bạn không có quyền sửa việc này.','error');
   const g=grpOfT(t),glock=!mg&&!!(g&&g.locked),lock=!mg&&byMgr(t)||glock,c=mcOf(t),tg=tagsOf(t);
-  const dlock=lock||(!mg&&!!id&&!!t.deadline);   /* deadline đã nhập thì nhân viên không đổi được nữa; cần dời thì nhờ quản lý */   /* việc By Manager / nhóm đã được duyệt: nhân viên không đổi nội dung, deadline */
+  const dlock=lock||(!mg&&!!id&&!!t.deadline);
+  const bmV2=(assign||byMgr(t))&&isV2(`${y}-${mm}`);   /* quy chế 80/20: việc quản lý giao tính điểm cố định, không cần trọng số */   /* deadline đã nhập thì nhân viên không đổi được nữa; cần dời thì nhờ quản lý */   /* việc By Manager / nhóm đã được duyệt: nhân viên không đổi nội dung, deadline */
   /* người làm chung: thành viên hiện có, người đang được mời, và danh sách để chọn thêm */
   const inGrp=g?[...g.members,...(g.invited||[])]:[],opts=assign?[]:dirEmps().filter(x=>x.id!==empId&&!inGrp.includes(x.id));
   MATE_OPTS={};opts.forEach(x=>{MATE_OPTS[`${x.name} · ${x.code}`]=x.id});
@@ -196,7 +255,7 @@ function taskForm(empId,y,mm,id,opt={}){
     ${glock?'<p class="hint full">Việc làm chung này đã được quản lý Duyệt cho một người trong nhóm nên nội dung, deadline và Ngày hoàn thành không đổi được nữa.</p>':''}
     ${mg?`<div class="f full"><span>Tag ${assign?'cho việc giao':''} <small class="muted">(nhân viên sẽ thấy trên việc của mình)</small></span><div class="tgs" role="group" aria-label="Tag">${Object.entries(TAGS).map(([k,l])=>`<label class="tgck ${k}"><input type="checkbox" name="tag_${k}" ${tg.includes(k)?'checked':''}> ${l}</label>`).join('')}</div></div>`:''}
     <label class="f full"><span>Nội dung công việc / Đóng góp <i style="color:var(--bad);font-style:normal">*</i></span><textarea class="in" name="title" rows="3" ${lock?'readonly':''}>${esc(t.title)}</textarea></label>
-    ${inp('weight',`Trọng số – nhân viên tự chấm (${W_MIN}–${W_MAX})`,t.weight,{type:'number',step:legacy?'any':'1',req:1,attrs:legacy?'':`min="${W_MIN}" max="${W_MAX}" inputmode="numeric"`})}${mg?sel('approval','Quản lý duyệt',[['','Chờ duyệt'],[AP_VAL.ok,'Duyệt – tính điểm vào KPI'],[AP_VAL.recheck,'Re-check – không tính điểm']],AP_VAL[ap]):`<div class="f"><span>Quản lý duyệt</span><div>${apBd(ap)}</div></div>`}
+    ${bmV2?`<div class="f"><span>Điểm</span><div class="hint">Việc quản lý giao: ${fmtK(kpi2().perTask)} điểm khi được Duyệt (Khung 1), không dùng trọng số, không trừ khi trễ.</div><input type="hidden" name="weight" value="${esc(wOk(+t.weight)?t.weight:(t.weight||1))}"></div>`:inp('weight',`Trọng số – nhân viên tự chấm (${W_MIN}–${W_MAX})`,t.weight,{type:'number',step:legacy?'any':'1',req:1,attrs:legacy?'':`min="${W_MIN}" max="${W_MAX}" inputmode="numeric"`})}${mg?sel('approval','Quản lý duyệt',[['','Chờ duyệt'],[AP_VAL.ok,'Duyệt – tính điểm vào KPI'],[AP_VAL.recheck,'Re-check – không tính điểm']],AP_VAL[ap]):`<div class="f"><span>Quản lý duyệt</span><div>${apBd(ap)}</div></div>`}
     ${mg?`<label class="f full" id="kt-mcw" hidden><span>Comment by Manager <small class="muted">(nhân viên sẽ thấy; chỉ nhập khi chọn Re-check)</small></span><textarea class="in" name="mc" rows="2" maxlength="500" placeholder="Cần sửa / bổ sung gì…">${esc(c&&!c.done?c.text:'')}</textarea></label>`:''}
     ${legacy?`<p class="hint full">Trọng số đang lưu là ${esc(t.weight)}, nằm ngoài thang ${W_MIN}–${W_MAX}. Có thể giữ nguyên; nếu sửa, hãy nhập số nguyên từ ${W_MIN} đến ${W_MAX}.</p>`:''}
     ${inp('deadline',dlock?'Deadline <small class="muted">🔒 đã khoá, cần dời thì nhờ quản lý</small>':`Deadline${!mg?' <small class="muted">(lưu xong sẽ khoá, không sửa được)</small>':''}`,t.deadline||'',{type:'date',attrs:dlock?'readonly aria-readonly="true"':''})}${inp('submitted',g?'Ngày hoàn thành <small class="muted">(áp dụng cho cả nhóm)</small>':'Ngày hoàn thành',t.submitted||'',{type:'date',attrs:glock?'readonly':''})}
@@ -386,13 +445,16 @@ ACT['kt-undo']=el=>{const {e,y,mm,id}=el.dataset;if(!canSheet(e))return toast('B
 
 /* ---------- phiếu đánh giá KPI tháng (in / PDF) ---------- */
 function slipHTML(empId,y,mm){
-  const e=empOf(empId),sh=sheetOf(empId,y),st=monthStats(sh&&sh.months[mm]),c=db.company||{},g=gradeOf(st.kpi);
+  const e=empOf(empId),sh=sheetOf(empId,y),st=monthStats(sh&&sh.months[mm],`${y}-${mm}`),c=db.company||{},g=gradeOf(st.kpi);
   return `<div class="slip wide"><div class="sh"><div class="co"><b>${esc(c.name||'')}</b><div>${esc(c.note||'')}</div></div><div style="text-align:right">Ngày in: ${fmtDate(todayStr())}<br>KPI khống chế: 0 – ${KPI_CAP}</div></div>
     <h2>PHIẾU ĐÁNH GIÁ KPI</h2><div class="sub">Tháng ${mm} / ${y}</div>
     <div class="mt"><div>Họ và tên: <b>${esc(e.name)}</b></div><div>Mã NV: <b>${esc(e.code)}</b></div><div>Nhóm: <b>${esc(e.dept||'—')}</b></div><div>Chức danh: <b>${esc(e.title||'—')}</b></div></div>
     <table><thead><tr><th>STT</th><th>Nội dung công việc / Đóng góp</th><th>Trọng số</th><th>Deadline</th><th>Ngày hoàn thành</th><th>Ngày trễ</th><th>Điểm cơ bản</th><th>Điểm thưởng</th><th>Điểm thành phần</th><th>Quản lý duyệt</th><th>Ghi chú</th></tr></thead><tbody>
-    ${st.rows.map((r,i)=>`<tr${r.sc.ap==='recheck'&&r.sc.state!=='moved'?' style="background:#fdecea"':''}><td style="text-align:center">${i+1}</td><td style="white-space:pre-line">${tagText(r.t)?`<i>[${esc(tagText(r.t))}]</i> `:''}${esc(r.t.title)}</td><td style="text-align:right">${fmtK(r.sc.w)}</td><td>${fmtDate(r.t.deadline)}</td><td>${r.sc.state==='moved'?'Đã chuyển '+mLbl(r.t.movedTo.month,r.t.movedTo.year,y):fmtDate(r.t.submitted)}</td><td style="text-align:right">${r.sc.late??''}</td><td style="text-align:right">${r.sc.base??''}</td><td style="text-align:right">${r.sc.bonus??''}</td><td style="text-align:right">${r.sc.comp==null?'':r.sc.counted?`<b>${fmtK2(r.sc.comp)}</b>`:`<span style="color:#888">${fmtK2(r.sc.comp)}</span>`}</td><td>${r.sc.state!=='moved'&&(r.sc.comp!=null||r.sc.ap)?AP[r.sc.ap][1]:''}</td><td style="white-space:pre-line">${esc(r.t.note||'')}${mcOf(r.t)&&!mcOf(r.t).done?`${r.t.note?'\n':''}<b>Comment by Manager:</b> ${esc(mcOf(r.t).text)}`:''}</td></tr>`).join('')}
+    ${sortRows(st.rows).map((r,i)=>`<tr${r.sc.ap==='recheck'&&r.sc.state!=='moved'?' style="background:#fdecea"':''}><td style="text-align:center">${i+1}</td><td style="white-space:pre-line">${tagText(r.t)?`<i>[${esc(tagText(r.t))}]</i> `:''}${esc(r.t.title)}</td><td style="text-align:right">${fmtK(r.sc.w)}</td><td>${fmtDate(r.t.deadline)}</td><td>${r.sc.state==='moved'?'Đã chuyển '+mLbl(r.t.movedTo.month,r.t.movedTo.year,y):fmtDate(r.t.submitted)}</td><td style="text-align:right">${r.sc.late??''}</td><td style="text-align:right">${r.sc.base??''}</td><td style="text-align:right">${r.sc.bonus??''}</td><td style="text-align:right">${r.sc.comp==null?'':r.sc.counted?`<b>${fmtK2(r.sc.comp)}</b>`:`<span style="color:#888">${fmtK2(r.sc.comp)}</span>`}</td><td>${r.sc.state!=='moved'&&(r.sc.comp!=null||r.sc.ap)?AP[r.sc.ap][1]:''}</td><td style="white-space:pre-line">${esc(r.t.note||'')}${mcOf(r.t)&&!mcOf(r.t).done?`${r.t.note?'\n':''}<b>Comment by Manager:</b> ${esc(mcOf(r.t).text)}`:''}</td></tr>`).join('')}
     <tr><td colspan="2"><b>KPI TỔNG THÁNG</b> (các việc đã Duyệt)</td><td style="text-align:right"><b>${fmtK(st.weight)}</b></td><td colspan="5"></td><td style="text-align:right"><b>${fmtK2(st.kpi)}</b></td><td colspan="2"><b>${g?g[2]:''}</b>${st.pending?` · ${st.pending} việc chờ duyệt`:''}${st.recheck?` · ${st.recheck} việc Re-check`:''}</td></tr></tbody></table>
+    ${st.v2?`<table style="margin-top:8px;width:auto"><tr><td><b>Khung 1 · Quản lý giao &amp; Tuân thủ</b></td><td style="text-align:right"><b>${fmtK(st.p20)}</b> / ${kpi2().mgrMax+kpi2().compMax}</td><td>Việc quản lý giao: ${st.bmOk} việc Duyệt × ${fmtK(kpi2().perTask)} = ${fmtK(st.pMgr)} / ${kpi2().mgrMax} · Tuân thủ: ${fmtK(st.pComp)} / ${kpi2().compMax} (đi trễ ${st.lateList.length} lần${st.lateList.length?': '+st.lateList.map(x=>fmtDate(x.d).slice(0,5)).join(', '):''}; lỗi NC ${st.ncList.length})</td></tr>
+      <tr><td><b>Khung 2 · Công việc By User</b></td><td style="text-align:right"><b>${fmtK2(st.p80)}</b> / ${kpi2().userStd}</td><td>Tổng điểm thành phần các việc tự lập đã Duyệt (tổng trọng số ${fmtK(st.weight)})</td></tr>
+      <tr><td><b>Khung 3 · KPI tháng</b></td><td style="text-align:right"><b>${fmtK2(st.kpi)}</b></td><td>Khung 1 + Khung 2, khống chế 0 – ${KPI_CAP}</td></tr></table>`:''}
     <div class="keep"><p style="margin-top:10px;white-space:pre-line"><b>Nhận xét của quản lý:</b> ${esc((sh&&sh.months[mm].comment)||'')}</p>
     <p class="sn">Trọng số do nhân viên tự chấm, thang ${W_MIN}–${W_MAX} · Trễ 1 ngày −${LATE_PENALTY} điểm (ngày lịch) · Sớm 1 ngày làm việc +${BONUS_PER_DAY} điểm thưởng (tối đa ${BONUS_CAP}) · Điểm thành phần = (Điểm cơ bản × Trọng số + Điểm thưởng) / 100 · Chỉ việc quản lý Duyệt mới tính vào KPI; việc Re-check không tính điểm · Xếp loại: Xuất sắc ≥120, Tốt 100–119, Đạt 80–99, Cần cải thiện &lt;80.</p>
     <div class="sign" style="grid-template-columns:1fr 1fr"><div><b>Nhân viên tự đánh giá</b><br><small>(Ký, ghi rõ họ tên)</small></div><div><b>Quản lý duyệt</b><br><small>(Ký, ghi rõ họ tên)</small></div></div></div>

@@ -90,29 +90,61 @@ const byMgr=t=>!!t&&t.by==='manager';
 const tagsOf=t=>((t&&t.tags)||[]).filter(k=>TAGS[k]);
 /* Comment by Manager: quản lý ghi khi chọn Re-check; done = nhân viên đã cập nhật lại (hiện mờ, gạch đi) */
 const mcOf=t=>t&&t.mgrComment&&String(t.mgrComment.text||'').trim()?t.mgrComment:null;
-function monthStats(m){
-  const rows=((m&&m.tasks)||[]).map(t=>({t,sc:scoreTask(t)}));
+/* =====================================================================
+   QUY CHẾ 80 / 20 (áp dụng từ tháng kpi2().since; các tháng trước giữ cách tính cũ 100% công việc)
+   - Khung 2 · Công việc By User (chuẩn 80): tổng điểm thành phần các việc nhân viên tự thêm, đã Duyệt.
+   - Khung 1 · Quản lý giao & Tuân thủ (20):
+       + Việc quản lý giao: mỗi việc By Manager được Duyệt = 2 điểm (không trừ khi trễ), tối đa 10.
+       + Tuân thủ: 10 điểm, trừ 1 mỗi lần đi trễ (giờ vào sau 08:05) và 1 mỗi lỗi NC khi Audit; thấp nhất 0.
+   - Khung 3 · KPI tháng = Khung 1 + Khung 2 (khống chế 0–130).
+   Tham số sửa được ở Settings → Nhóm & ngày lễ (db.company.kpi2).
+   ===================================================================== */
+const KPI2_DEF={since:'2026-10',userStd:80,mgrMax:10,perTask:2,compMax:10,latePen:1,ncPen:1,lateAfter:'08:05'};
+const kpi2=()=>({...KPI2_DEF,...((db&&db.company&&db.company.kpi2)||{})});
+const isV2=ym=>!!ym&&ym>=kpi2().since;
+function monthStats(m,ym){
+  const v2=isV2(ym),P=kpi2(),rows=((m&&m.tasks)||[]).map(t=>({t,sc:scoreTask(t)}));
   /* scored = việc đã hoàn thành (có deadline + ngày hoàn thành) · counted = đã Duyệt · pending = chờ duyệt · recheck = Re-check
-     kpi = điểm chính thức (chỉ việc đã Duyệt) · self = điểm tự chấm (đã Duyệt + chờ duyệt, không gồm Re-check) */
-  const st={rows,n:0,weight:0,raw:0,rawSelf:0,bonus:0,scored:0,counted:0,pending:0,recheck:0,ontime:0,early:0,late:0,open:0,nodate:0,overdue:0,moved:0,kpi:null,self:null};
+     kpi = điểm chính thức (chỉ việc đã Duyệt) · self = điểm tự chấm (đã Duyệt + chờ duyệt, không gồm Re-check)
+     Quy chế 80/20: raw / weight chỉ gồm việc By User; việc By Manager đếm ở bm*; lateList / ncList = tuân thủ */
+  const st={rows,v2,n:0,weight:0,raw:0,rawSelf:0,bonus:0,scored:0,counted:0,pending:0,recheck:0,ontime:0,early:0,late:0,open:0,nodate:0,overdue:0,moved:0,kpi:null,self:null,
+    bmN:0,bmOk:0,bmPend:0,bmRe:0,lateList:[],ncList:[],p80:null,p20:null,pMgr:null,pComp:null};
   for(const {t,sc} of rows){
     if(sc.state==='moved'){st.moved++;continue}
-    st.n++;st.weight+=sc.w;st[sc.state]++;
+    st.n++;st[sc.state]++;
+    const bm=v2&&byMgr(t);if(bm)st.bmN++;else st.weight+=sc.w;
     if(sc.comp!=null){st.scored++;
-      if(sc.ap==='ok'){st.counted++;st.raw+=sc.comp;st.bonus+=sc.bonus}else if(sc.ap==='recheck')st.recheck++;else st.pending++;
-      if(sc.ap!=='recheck')st.rawSelf+=sc.comp}
+      if(sc.ap==='ok'){st.counted++;if(bm)st.bmOk++;else{st.raw+=sc.comp;st.bonus+=sc.bonus}}
+      else if(sc.ap==='recheck'){st.recheck++;if(bm)st.bmRe++}
+      else{st.pending++;if(bm)st.bmPend++}
+      if(sc.ap!=='recheck'&&!bm)st.rawSelf+=sc.comp}
   }
   st.weight=r2(st.weight);
   const cap=v=>Math.min(KPI_CAP,Math.max(0,v));
-  if(st.counted)st.kpi=cap(st.raw);
-  if(st.counted+st.pending)st.self=cap(st.rawSelf);
+  if(v2){
+    st.lateList=[...((m&&m.late)||[])].sort((a,b)=>a.d<b.d?-1:1);st.ncList=[...((m&&m.nc)||[])].sort((a,b)=>a.d<b.d?-1:1);
+    st.pMgr=Math.min(P.mgrMax,P.perTask*st.bmOk);
+    st.pComp=Math.max(0,P.compMax-P.latePen*st.lateList.length-P.ncPen*st.ncList.length);
+    st.p20=st.pMgr+st.pComp;st.p80=st.raw;
+    const mgrSelf=Math.min(P.mgrMax,P.perTask*(st.bmOk+st.bmPend));
+    if(st.counted)st.kpi=cap(st.raw+st.p20);
+    if(st.counted+st.pending)st.self=cap(st.rawSelf+mgrSelf+st.pComp);
+  }else{
+    if(st.counted)st.kpi=cap(st.raw);
+    if(st.counted+st.pending)st.self=cap(st.rawSelf);
+  }
   return st;
+}
+/* Thứ tự hiển thị việc: chưa hoàn thành lên trên (deadline gần trước), đã hoàn thành ở dưới, việc đã chuyển tháng cuối cùng */
+function sortRows(rows){
+  const g=r=>r.sc.state==='moved'?2:r.t.submitted?1:0,k=r=>r.t.deadline||'9999';
+  return rows.map((r,i)=>({r,i})).sort((a,b)=>g(a.r)-g(b.r)||(k(a.r)<k(b.r)?-1:k(a.r)>k(b.r)?1:a.i-b.i)).map(x=>x.r);
 }
 const avgOf=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
 /* Trung bình chỉ tính các tháng đã có điểm (tháng chưa chấm không bị coi là 0).
    Tháng đang diễn ra (chưa kết thúc) chỉ là điểm TẠM TÍNH: giữ ở kpiProv, không tính vào quý / năm / xếp hạng. */
 function yearStats(sheet){
-  const months=MM.map(mm=>monthStats(sheet&&sheet.months&&sheet.months[mm]));
+  const months=MM.map(mm=>monthStats(sheet&&sheet.months&&sheet.months[mm],sheet&&sheet.year?`${sheet.year}-${mm}`:null));
   if(sheet){const cy=+curYear(),ci=new Date().getMonth();months.forEach((m,i)=>{if(m.kpi!=null&&(+sheet.year>cy||(+sheet.year===cy&&i>=ci))){m.prov=true;m.kpiProv=m.kpi;m.kpi=null}})}
   const ev=months.map((m,i)=>m.kpi==null?null:i).filter(i=>i!=null),vals=ev.map(i=>months[i].kpi);
   const quarters=[0,1,2,3].map(q=>{const v=[0,1,2].map(k=>months[q*3+k].kpi).filter(x=>x!=null);return{avg:avgOf(v),n:v.length}});

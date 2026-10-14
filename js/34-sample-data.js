@@ -23,8 +23,10 @@ function loadSample(){
     const sh={id:sheetId(e.id,y),empId:e.id,year:y,months:emptyMonths(),updatedAt:today,source:'Dữ liệu mẫu'};db.sheets.push(sh);
     for(let m=1;m<=cm;m++){
       /* trọng số do nhân viên tự chấm theo thang 1–10; cả tháng cộng lại đúng 100 */
-      const mm=pad(m),n=ri(12,16),ws=Array.from({length:n},()=>ri(4,10));let sum=ws.reduce((a,b)=>a+b,0);
-      while(sum!==100){const k=ri(0,n-1);if(sum>100&&ws[k]>W_MIN){ws[k]--;sum--}else if(sum<100&&ws[k]<W_MAX){ws[k]++;sum++}}
+      const mm=pad(m),v2=isV2(`${y}-${mm}`),target=v2?kpi2().userStd:100,n=v2?ri(10,13):ri(12,16),ws=Array.from({length:n},()=>ri(4,10));let sum=ws.reduce((a,b)=>a+b,0);
+      while(sum!==target){const k=ri(0,n-1);if(sum>target&&ws[k]>W_MIN){ws[k]--;sum--}else if(sum<target&&ws[k]<W_MAX){ws[k]++;sum++}}
+      if(v2){const L=ei%3===0?ri(1,3):ei===5?1:0,used=new Set();sh.months[mm].late=[];for(let j=0;j<L;j++){let d;do{d=iso(m,ri(1,Math.min(28,+today.slice(8)||28)))}while(used.has(d));used.add(d);sh.months[mm].late.push({id:uid('l')+ei+j,d,t:'08:'+pad(ri(6,40)),by:'Quản lý',at:today})}
+        sh.months[mm].nc=ei===4?[{id:uid('n')+ei,d:iso(m,3),note:'Hồ sơ 5S khu vực kho chưa cập nhật',by:'Quản lý',at:today}]:[]}
       const titles=[...pool].sort(()=>rnd()-.5);
       ws.forEach((w,i)=>{
         const dl=iso(m,ri(4,28)),rep=Math.floor(i/titles.length),t={id:uid('t')+ei+m+i,title:titles[i%titles.length]+(rep?` (đợt ${rep+1})`:''),weight:w,deadline:dl,submitted:null,approval:'',note:''};
@@ -44,6 +46,8 @@ function loadSample(){
         if(m===cm-1&&i===n-1&&[0,2,4].includes(ei)){t.submitted=null;t.approval='';t.note=ei===2?'Chờ nhà cung cấp phản hồi':'Xin dời sang tháng sau do vướng lịch đào tạo'}
         sh.months[mm].tasks.push(t);
       });
+      /* quy chế 80/20: việc quản lý giao không dùng trọng số → bù phần trọng số đó vào việc By User để tổng đúng chuẩn */
+      if(v2){const us=sh.months[mm].tasks.filter(t=>!byMgr(t));let diff=target-us.reduce((a,t)=>a+t.weight,0);for(const t of us){if(diff<=0)break;const add=Math.min(W_MAX-t.weight,diff);t.weight+=add;diff-=add}}
       /* người làm tốt thường nhận thêm việc phát sinh ngoài kế hoạch → tổng trọng số vượt 100, KPI trên 100 */
       if(m<cm&&q>=.9){const k=ei%3===1?ri(2,4):ri(0,2);for(let i=0;i<k;i++){const dl=iso(m,ri(8,27));sh.months[mm].tasks.push({id:uid('t')+'x'+ei+m+i,title:'Việc phát sinh: '+pool[ri(0,pool.length-1)].toLowerCase(),weight:ri(3,8),deadline:dl,submitted:rnd()<.5?isoOf(dayNum(dl)-ri(1,3)):dl,approval:AP_VAL.ok,note:'Phát sinh ngoài kế hoạch tháng'})}}
       /* người hay trễ: thỉnh thoảng còn việc tháng cũ chưa hoàn thành */

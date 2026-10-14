@@ -675,3 +675,52 @@ html[data-theme="bujo"] .brand .lg-t{background:var(--acc);color:#fff}
 .bmlist li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:13.5px}
 .bmlist li .pf{margin:0}
 [data-nb] .pf.mgr{background:#ede9fe;color:#5b21b6}[data-nb] .pf.grp{background:#e0f2fe;color:#075985}
+
+/* ---------- KPI 80 / 20: Khung 1, Khung 2, Khung 3 ---------- */
+.kf{border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:0 0 14px;background:var(--panel)}
+.kf20{border-top:3px solid #7c5cd6}
+.kf80{border-top:3px solid var(--acc)}
+.kftot{border-top:3px solid var(--ok);background:var(--mute-s)}
+.kfh{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.kfh h4{margin:0;font-size:15px}
+.kfs{font-size:13px;color:var(--muted);white-space:nowrap}
+.kfs b{font-size:22px;color:var(--ink);font-weight:700}
+.kfs.sm b,.kfs.sm{font-size:13px}
+.kfs.sm{font-weight:600;color:var(--ink)}
+.kfs.big b{font-size:28px}
+.kfsub{border-top:1px dashed var(--line);padding-top:10px;margin-top:10px}
+.kfsh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.kfsh .muted{font-size:12.5px;flex:1}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cmpc{border:1px solid var(--line2);border-radius:6px;padding:10px 12px;display:grid;gap:8px;align-content:start}
+.cmph{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.cmph b{font-size:16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip.late{background:var(--bad-s);color:#a3271f}
+.chip.late small{opacity:.8}
+.ncl{margin:0;padding-left:18px;display:grid;gap:3px;font-size:13px}
+.ncl span{font-weight:600}
+.ncl .x,.chip .x{border:0;background:none;cursor:pointer;color:inherit;font-size:12px;padding:0 2px}
+.cmpf{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cmpf .in{width:auto;min-height:32px;padding:4px 8px;font-size:13px}
+.cmpf input[name=note]{flex:1;min-width:160px}
+.kfeq{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;font-size:18px;font-weight:600}
+.kfeq small{display:block;font-size:11.5px;font-weight:400;color:var(--muted)}
+.kfeq i{font-style:normal;color:var(--muted)}
+.kfeq b{font-size:22px}
+@media (max-width:760px){.cmp{grid-template-columns:1fr}}
+/* ô số liệu bấm được + tô sáng việc cần xem */
+.kpib{all:unset;display:block;cursor:pointer;border-radius:12px}
+.kpib .kpi{height:100%;margin:0}
+.kpib:hover .kpi{border-color:var(--muted)}
+.kpib:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.kpib.on .kpi{box-shadow:0 0 0 2px var(--warn);background:var(--warn-s)}
+table.t tr.hl td{background:#fff6d6}
+table.t tr.hl td:first-child{box-shadow:inset 3px 0 0 #e0a03c}
+table.t tr.hl.recheck td{background:#fde3dd}
+.fcard{border-left:4px solid #e0a03c}
+.fcard:focus{outline:none}
+.fcard table.t tr.hl td{background:#fffaea}
+/* danh sách nhân viên theo nhóm */
+.egrp .egm{color:var(--muted);font-size:13px;margin:0 0 10px;line-height:1.5}
+.fcard{scroll-margin-top:84px}

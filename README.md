@@ -27,6 +27,17 @@ Chế độ dùng thử (chưa bật Firebase) đăng nhập bằng `admin` / `a
 - **Giao diện “sổ tay”** (nút 🎨 trên thanh trên cùng, mỗi người tự chọn, lưu theo trình duyệt): **Sổ kẻ ô** (mặc định: bìa xanh than có lỗ gáy, giấy kẻ ô, đường lề đỏ ở bảng việc), **Bullet journal** (lưới chấm, xanh lá xô thơm, menu sáng), **Sổ kế hoạch** (giấy dòng kẻ ngang, thẻ chỉ mục màu nghệ, tiêu đề viết tay) và **Cổ điển** (giao diện cũ). Biểu đồ đổi màu theo giao diện.
 - **Settings** (chỉ Admin): nhóm, ngày nghỉ lễ, người dùng / phân quyền, sao lưu / khôi phục JSON, sao lưu đám mây. Mục **Quy chế KPI** ai cũng xem được.
 
+## Quy chế 80 / 20 (từ T10/2026, đổi được ở Settings → Nhóm & ngày lễ)
+KPI tháng = **Khung 1 · Quản lý giao & Tuân thủ (20)** + **Khung 2 · Công việc By User (80)**, khống chế 0–130. Trang nhân viên hiện 3 khung: Khung 1, Khung 2 và Khung 3 (KPI tháng = Khung 1 + Khung 2).
+
+| Phần | Tối đa | Cách tính |
+|---|---|---|
+| Việc quản lý giao (Khung 1) | 10 | Mỗi việc By Manager được Duyệt = 2 điểm, chỉ cộng, không trừ khi trễ; không dùng trọng số |
+| Tuân thủ (Khung 1) | 10 | 10 điểm, trừ 1 mỗi lần đi trễ (giờ vào sau 08:05) và 1 mỗi lỗi NC khi Audit; quản lý nhập ngày đi trễ và lỗi NC |
+| Công việc By User (Khung 2) | 80 | Tổng điểm thành phần các việc nhân viên tự thêm đã Duyệt; tổng trọng số chuẩn 80 |
+
+Các tháng trước tháng áp dụng giữ cách tính cũ (100% công việc, chuẩn trọng số 100).
+
 ## Công thức KPI (giữ theo file Excel)
 | Mục | Quy tắc |
 |---|---|
