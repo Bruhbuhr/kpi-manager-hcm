@@ -15,10 +15,10 @@ service cloud.firestore {
     function isStaff()       { return active() && me().role == 'staff' && me().empId is string && me().empId != ''; }
     function initialized()   { return exists(/databases/$(database)/documents/meta/init); }
 
-    // Dấu phiên bản Rules (v4). App đọc thử đường dẫn này sau khi đăng nhập: đọc được nghĩa là Rules trên Firebase
+    // Dấu phiên bản Rules (v5). App đọc thử đường dẫn này sau khi đăng nhập: đọc được nghĩa là Rules trên Firebase
     // đúng là bản này; bị từ chối nghĩa là Firebase đang chạy bản Rules cũ và app sẽ hiện cảnh báo cho Admin.
-    // Mỗi lần sửa Rules: đổi 'v4' ở đây và RULES_VER trong js/50-firebase-sync.js thành số mới.
-    match /rulesCheck/{v} { allow get: if signedIn() && v == 'v4'; }
+    // Mỗi lần sửa Rules: đổi 'v5' ở đây và RULES_VER trong js/50-firebase-sync.js thành số mới.
+    match /rulesCheck/{v} { allow get: if signedIn() && v == 'v5'; }
 
     // Hồ sơ người dùng (vai trò, nhân viên được gắn): mỗi người đọc hồ sơ của mình, Admin đọc / ghi tất cả.
     // Admin chỉ tạo được Quản lý và Nhân viên; vai trò admin chỉ dành cho adminEmail() ở lần thiết lập đầu tiên.
@@ -82,6 +82,18 @@ service cloud.firestore {
       allow create: if isManager() || (isStaff() && me().empId in request.resource.data.members);
       allow update: if isManager() || (isStaff() && (me().empId in resource.data.members || me().empId in resource.data.invited));
       allow delete: if isManager();
+    }
+
+    // Thông báo: to = 'mgr' (mọi Admin / Quản lý) hoặc 'emp:<id nhân viên>' (tài khoản gắn với nhân viên đó).
+    //  - Mỗi người chỉ đọc thông báo gửi cho mình; ai đang hoạt động cũng gửi được (đứng tên chính mình).
+    //  - Người nhận chỉ được sửa danh sách đã đọc (readBy). Chỉ Admin xoá (dọn thông báo cũ).
+    function myEmpKey()   { return 'emp:' + me().get('empId', ''); }
+    function notifMine(d) { return isAdmin() || (isManager() && (d.to == 'mgr' || d.to == myEmpKey())) || (isStaff() && d.to == myEmpKey()); }
+    match /notifs/{id} {
+      allow read:   if notifMine(resource.data);
+      allow create: if active() && request.resource.data.fromUid == request.auth.uid && request.resource.data.readBy.size() == 0;
+      allow update: if notifMine(resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']);
+      allow delete: if isAdmin();
     }
   }
 }

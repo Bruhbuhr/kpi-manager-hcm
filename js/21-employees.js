@@ -212,9 +212,9 @@ function cmpEdit(form,fn){if(!can('manage'))return toast('Chỉ quản lý đư�
   if(transact(()=>{const sh=sheetOf(e,y,true),m=sh.months[mm];fn(m);sh.updatedAt=todayStr()})){refreshTbl();return true}}
 SUB['late-add']=form=>{const d=fd(form),P=kpi2();
   if(d.t&&d.t<=P.lateAfter)return toast(`Giờ vào ${d.t} không tính là đi trễ (chỉ tính sau ${P.lateAfter}).`,'error');
-  cmpEdit(form,m=>{m.late=m.late||[];if(m.late.some(x=>x.d===d.d))throw new Error('Ngày này đã ghi đi trễ rồi.');m.late.push({id:uid('l'),d:d.d,t:d.t||'',by:session?.name||'',at:todayStr()})})&&toast('Đã ghi ngày đi trễ')};
+  cmpEdit(form,m=>{m.late=m.late||[];if(m.late.some(x=>x.d===d.d))throw new Error('Ngày này đã ghi đi trễ rồi.');m.late.push({id:uid('l'),d:d.d,t:d.t||'',by:session?.name||'',at:todayStr()})})&&(toast('Đã ghi ngày đi trễ'),notifyEmp(form.dataset.e,{ic:'⏰',title:'Ghi nhận đi trễ',body:`Ngày ${fmtDate(d.d)}${d.t?' · giờ vào '+d.t:''} · trừ ${fmtK(P.latePen)} điểm Tuân thủ`,e:form.dataset.e,y:form.dataset.y,mm:form.dataset.mm}))};
 SUB['nc-add']=form=>{const d=fd(form);if(!String(d.note||'').trim())return toast('Nhập nội dung lỗi NC.','error');
-  cmpEdit(form,m=>{(m.nc=m.nc||[]).push({id:uid('n'),d:d.d,note:d.note.trim(),by:session?.name||'',at:todayStr()})})&&toast('Đã ghi lỗi NC')};
+  cmpEdit(form,m=>{(m.nc=m.nc||[]).push({id:uid('n'),d:d.d,note:d.note.trim(),by:session?.name||'',at:todayStr()})})&&(toast('Đã ghi lỗi NC'),notifyEmp(form.dataset.e,{ic:'⚠️',title:'Lỗi NC khi Audit',body:`Ngày ${fmtDate(d.d)}: ${d.note.trim()} · trừ ${fmtK(kpi2().ncPen)} điểm Tuân thủ`,e:form.dataset.e,y:form.dataset.y,mm:form.dataset.mm}))};
 ACT['late-x']=el=>{if(confirm('Bỏ ngày đi trễ này?'))cmpEdit(el,m=>{m.late=(m.late||[]).filter(x=>x.id!==el.dataset.id)})};
 ACT['nc-x']=el=>{if(confirm('Bỏ lỗi NC này?'))cmpEdit(el,m=>{m.nc=(m.nc||[]).filter(x=>x.id!==el.dataset.id)})};
 /* bấm ô "Việc chưa hoàn thành" / "Chờ quản lý duyệt": mở danh sách các việc đó trong năm và tô sáng trên bảng */
@@ -307,7 +307,7 @@ function ktSave(form){
   if(!d.title)return fail('Nhập nội dung công việc.');
   if(!(cur&&d.weight===+cur.weight)&&!wOk(d.weight))return fail(`Trọng số là số nguyên từ ${W_MIN} đến ${W_MAX}.`);
   if(mg&&apOf(d)==='ok'&&!(d.deadline&&d.submitted))return fail('Việc chưa có Deadline và Ngày hoàn thành nên chưa có điểm để Duyệt.');
-  let tid=id,added=0;
+  let tid=id,added=0,addedIds=[],gRef=null;const prevAp=cur?apOf(cur):'',prevMc=mcOf(cur)&&!mcOf(cur).done?mcOf(cur).text:'';
   const ok=transact(()=>{
     const fill=t=>{Object.assign(t,{title:d.title,weight:d.weight,deadline:d.deadline,submitted:d.submitted,note:d.note});delete t.bonusManual;
       if(mg){
@@ -333,13 +333,29 @@ function ktSave(form){
         add.forEach(x=>{g.names[x]=nameOf(x);g.declined=(g.declined||[]).filter(z=>z!==x);
           if(mg){g.members.push(x);grpCopy(g,x,t)}                                                   /* quản lý thêm: vào việc ngay */
           else{g.invited.push(x);g.invitedBy[x]={empId:e,name:nameOf(e)||session?.name||'',at:todayStr()}}});   /* nhân viên thêm: gửi lời mời */
-        added=add.length;
+        added=add.length;addedIds=add;gRef=g;
       }
       sh.updatedAt=todayStr();
     }
     relockGroups();hydrateGroups();
   });
+  if(ok){   /* thông báo */
+    const nm=nameOf(e)||session?.name||'';
+    if(assign)targets.forEach(x=>notifyEmp(x,{ic:'📌',title:`Việc mới được giao: ${tShort(d)}`,body:`T${mm}/${y}${d.deadline?' · deadline '+fmtDate(d.deadline):''}${d.tags.length?' · '+d.tags.map(k=>TAGS[k]).join(' '):''}${targets.length>1?` · làm chung ${targets.length} người`:''}`,e:x,y,mm}));
+    else if(mg){
+      const na=apOf(d);if(na!==prevAp)apNotify(e,y,mm,d,na,na==='recheck'?d.mc:'');else if(na==='recheck'&&d.mc&&d.mc!==prevMc)notifyEmp(e,{ic:'💬',title:'Comment by Manager',body:`${tShort(d)}: ${d.mc}`,e,y,mm});
+      addedIds.forEach(x=>notifyEmp(x,{ic:'👥',title:'Bạn được thêm vào việc làm chung',body:`${tShort(d)} · T${gRef.mm}/${gRef.year}`,e:x,y:gRef.year,mm:gRef.mm}));
+    }else{
+      if(prevAp==='recheck')notify('mgr',{ic:'🔁',title:`${nm} đã cập nhật việc Re-check`,body:tShort(d),e,y,mm});
+      addedIds.forEach(x=>notifyEmp(x,{ic:'📨',title:`${nm} mời bạn làm chung một việc`,body:`${tShort(d)} · T${gRef.mm}/${gRef.year} · vào trang KPI của bạn để Nhận`,e:x,y:gRef.year,mm:gRef.mm}));
+    }
+  }
   return ok?{e,y,mm,id:tid,n:targets.length,added}:null;
+}
+/* thông báo cho nhân viên khi quản lý Duyệt / Re-check một việc */
+function apNotify(e,y,mm,t,val,comment){
+  if(val==='ok')notifyEmp(e,{ic:'✅',title:'Việc được Duyệt',body:`${tShort(t)} · điểm được tính vào KPI`,e,y,mm});
+  else if(val==='recheck')notifyEmp(e,{ic:'⚠️',title:'Việc cần Re-check',body:`${tShort(t)}${comment?' · '+comment:' · xem Comment by Manager'}`,e,y,mm});
 }
 SUB['kt-save']=form=>{const id=form.dataset.id,assign=!!form.dataset.assign,mg=can('manage'),r=ktSave(form);if(!r)return;
   done(assign?(r.n>1?`Đã giao việc làm chung cho ${r.n} nhân viên · T${r.mm}/${r.y}`:`Đã giao việc cho ${empName(r.e)} · T${r.mm}/${r.y}`)
@@ -351,20 +367,21 @@ ACT['grp-accept']=el=>{
   if(!canSheet(me))return toast('Bạn không có quyền.','error');
   let t=null;
   if(!transact(()=>{g.invited=g.invited.filter(x=>x!==me);if(!g.members.includes(me))g.members.push(me);g.names[me]=nameOf(me)||g.names[me]||session?.name||'';t=grpCopy(g,me,null);hydrateGroups()}))return;
+  {const iv=g.invitedBy&&g.invitedBy[me];if(iv&&iv.empId)notifyEmp(iv.empId,{ic:'👥',title:`${g.names[me]||'Đồng nghiệp'} đã nhận làm chung`,body:String(g.title||'').split('\n')[0],e:iv.empId,y:g.year,mm:g.mm})}
   const k=location.hash.slice(2);(ui.f[k]??={}).year=String(g.year);ui.f[k].mm=g.mm;rerender();
   toast('Đã nhận việc làm chung. Hãy tự chấm trọng số cho phần việc của bạn.');taskForm(me,g.year,g.mm,t.id);
 };
 ACT['grp-decline']=el=>{
   const g=grpOf(el.dataset.g),me=el.dataset.e;if(!g||!(g.invited||[]).includes(me))return;
   if(!confirm(`Từ chối làm chung việc “${String(g.title||'').split('\n')[0]}”?`))return;
-  if(transact(()=>{g.invited=g.invited.filter(x=>x!==me);(g.declined||(g.declined=[])).push(me)})){rerender();toast('Đã từ chối lời mời')}
+  if(transact(()=>{g.invited=g.invited.filter(x=>x!==me);(g.declined||(g.declined=[])).push(me)})){rerender();toast('Đã từ chối lời mời');const iv=g.invitedBy&&g.invitedBy[me];if(iv&&iv.empId)notifyEmp(iv.empId,{ic:'👥',title:`${gName(g,me)} đã từ chối làm chung`,body:String(g.title||'').split('\n')[0],e:iv.empId,y:g.year,mm:g.mm})}
 };
 ACT['kt-del']=el=>{const {e,y,mm,id}=el.dataset;if(!canDelTask(e,by((sheetOf(e,y)||{months:{[mm]:{tasks:[]}}}).months[mm].tasks,id)))return toast('Việc đã có ngày hoàn thành hoặc đã được quản lý phản hồi, chỉ quản lý xoá được.','error');if(!confirm(grpOfT(by(sheetOf(e,y).months[mm].tasks,id))?'Rời việc làm chung này? Phần việc của bạn sẽ bị xoá khỏi bảng KPI; những người khác vẫn giữ việc.':'Xoá việc này? Việc sẽ không còn tính vào KPI của tháng.'))return;
   if(transact(()=>{const sh=sheetOf(e,y),t=by(sh.months[mm].tasks,id),g=grpOfT(t);sh.months[mm].tasks=sh.months[mm].tasks.filter(t=>t.id!==id);sh.updatedAt=todayStr();
     /* rời việc làm chung khi không còn bản việc nào của người này trong nhóm */
     if(g&&!db.sheets.some(s=>s.empId===e&&MM.some(m=>s.months[m].tasks.some(x=>x.gid===g.id&&!x.movedTo))))g.members=g.members.filter(x=>x!==e);relockGroups()}))done('Đã xoá việc')};
 SUB['cmt-save']=form=>{if(!can('manage'))return toast('Chỉ quản lý được nhận xét.','error');const {e,y,mm}=form.dataset,v=fd(form).comment.trim();
-  if(transact(()=>{const sh=sheetOf(e,y,true);sh.months[mm].comment=v;sh.updatedAt=todayStr()})){rerender();toast('Đã lưu nhận xét')}};
+  if(transact(()=>{const sh=sheetOf(e,y,true);sh.months[mm].comment=v;sh.updatedAt=todayStr()})){rerender();toast('Đã lưu nhận xét');if(v)notifyEmp(e,{ic:'📝',title:`Nhận xét của quản lý tháng ${mm}/${y}`,body:v,e,y,mm})}};
 
 /* ---------- quản lý duyệt: Duyệt → điểm được tính · Re-check → không tính điểm, báo đỏ ---------- */
 function setApproval(e,y,mm,ids,val){
@@ -376,6 +393,7 @@ function setApproval(e,y,mm,ids,val){
       t.approval=AP_VAL[val]||'';if(val!=='recheck'&&t.mgrComment)t.mgrComment.done=true;n++});
     if(!n)throw new Error('Việc này không còn tồn tại.');
     sh.updatedAt=todayStr();relockGroups()});
+  if(ok){const sh=sheetOf(e,y);ids.forEach(id=>{const t=sh&&by(sh.months[mm].tasks,id);if(t)apNotify(e,y,mm,t,val,'')})}
   return ok?n:0;
 }
 document.addEventListener('change',ev=>{
@@ -394,6 +412,7 @@ function mcSave(e,y,mm,id,text){
     if(apOf(t)!=='recheck')throw new Error('Chỉ ghi Comment by Manager khi việc đang Re-check.');
     const c=mcOf(t);if(text){if(!c||c.done||c.text!==text){t.mgrComment=mcNew(text);changed=true}}else if(c&&!c.done){delete t.mgrComment;changed=true}
     if(changed)sh.updatedAt=todayStr()});
+  if(ok&&changed&&text){const t=by(sheetOf(e,y).months[mm].tasks,id);notifyEmp(e,{ic:'💬',title:'Comment by Manager',body:`${tShort(t)}: ${text}`,e,y,mm})}
   return ok&&changed;
 }
 SUB['mc-save']=form=>{const {e,y,mm,id}=form.dataset;if(mcSave(e,y,mm,id,fd(form).mc))toast('Đã lưu Comment by Manager');refreshTbl()};
@@ -408,7 +427,9 @@ ACT['ap-all']=el=>{
   if(!n)return toast('Không có việc nào đang chờ duyệt.','warn');
   const who=e?empName(e):`${new Set(plan.map(p=>p[0])).size} nhân viên${dept?' nhóm '+dept:''}`;
   if(!confirm(`Duyệt ${n} việc đang chờ duyệt của ${who}${mm?` trong tháng ${mm}/${y}`:` trong năm ${y}`}?\nĐiểm thành phần của các việc này sẽ được tính vào KPI. Việc Re-check không bị thay đổi.`))return;
-  if(transact(()=>{plan.forEach(([sid,m,ids])=>{const s=by(db.sheets,sid);s.months[m].tasks.forEach(t=>{if(ids.includes(t.id))t.approval=AP_VAL.ok});s.updatedAt=todayStr()});relockGroups()})){rerender();toast(`Đã duyệt ${n} việc`)}
+  if(transact(()=>{plan.forEach(([sid,m,ids])=>{const s=by(db.sheets,sid);s.months[m].tasks.forEach(t=>{if(ids.includes(t.id))t.approval=AP_VAL.ok});s.updatedAt=todayStr()});relockGroups()})){
+    const per={};plan.forEach(([sid,m,ids])=>{const s=by(db.sheets,sid),k=s.empId+'|'+m;(per[k]??={e:s.empId,m,n:0}).n+=ids.length});
+    Object.values(per).forEach(x=>notifyEmp(x.e,{ic:'✅',title:`Quản lý đã duyệt ${x.n} việc của bạn`,body:`Tháng ${x.m}/${y} · điểm được tính vào KPI`,e:x.e,y,mm:x.m}));rerender();toast(`Đã duyệt ${n} việc`)}
 };
 
 /* ---------- chuyển việc chưa hoàn thành sang tháng sau (mở từ hộp Sửa việc) ---------- */

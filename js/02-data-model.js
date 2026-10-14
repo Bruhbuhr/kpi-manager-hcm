@@ -39,6 +39,7 @@ function migrate(){const d=defaultDB();for(const k in d){if(db[k]===undefined)db
   if(!Array.isArray(db.company.holidays))db.company.holidays=[...DEFAULT_HOLIDAYS];
   db.employees.forEach(e=>{if(e.active===undefined)e.active=true});
   if(!Array.isArray(db.groups))db.groups=[];
+  if(!Array.isArray(db.notifs))db.notifs=[];
   db.sheets.forEach(s=>{if(!s.months)s.months={};MM.forEach(m=>{const x=s.months[m]||(s.months[m]={tasks:[],comment:''});if(!Array.isArray(x.tasks))x.tasks=[];if(x.comment==null)x.comment=''})});
   _hol=null;hydrateGroups()}
 function needsMigrate(){return db.sheets.some(s=>!s.months||MM.some(m=>!s.months[m]||!Array.isArray(s.months[m].tasks)))}

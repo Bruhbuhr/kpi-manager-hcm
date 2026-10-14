@@ -13,7 +13,8 @@ function sideHTML(){
   }).join('')+`</nav>${creditHTML('credit side-credit')}`;
 }
 function shell(){
-  $('#app').innerHTML=`<div class="app"><aside class="side" id="side"></aside><div class="main"><header class="top"><button class="burger" data-act="burger" aria-label="Menu">☰</button><div><div class="crumb" id="crumb"></div><h1 id="ptitle"></h1></div><div class="sp"></div><div class="usr"><span class="av">${esc((session.name||'?').trim().charAt(0).toUpperCase())}</span><div><b>${esc(session.name)}</b><small>${ROLES[session.role]}</small></div><button class="btn sm" data-act="theme" title="Giao diện" aria-label="Đổi giao diện">🎨</button><button class="btn sm" data-act="chpw" title="Đổi mật khẩu">🔑</button><button class="btn sm" data-act="logout">Đăng xuất</button></div></header><main class="content" id="content"></main><footer class="page-foot">${esc(CREDIT)}</footer></div></div><div class="scrim" data-act="burger"></div>`;
+  $('#app').innerHTML=`<div class="app"><aside class="side" id="side"></aside><div class="main"><header class="top"><button class="burger" data-act="burger" aria-label="Menu">☰</button><div><div class="crumb" id="crumb"></div><h1 id="ptitle"></h1></div><div class="sp"></div><div class="usr"><span class="av">${esc((session.name||'?').trim().charAt(0).toUpperCase())}</span><div><b>${esc(session.name)}</b><small>${ROLES[session.role]}</small></div><button class="btn sm bell" data-act="notif" title="Thông báo" aria-label="Thông báo"><span aria-hidden="true">🔔</span><em id="nbadge" hidden>0</em></button><button class="btn sm" data-act="theme" title="Giao diện" aria-label="Đổi giao diện">🎨</button><button class="btn sm" data-act="chpw" title="Đổi mật khẩu">🔑</button><button class="btn sm" data-act="logout">Đăng xuất</button></div></header><main class="content" id="content"></main><footer class="page-foot">${esc(CREDIT)}</footer></div></div><div class="scrim" data-act="burger"></div>`;
+  if(typeof notifStart==='function')notifStart();   /* thông báo của người đang đăng nhập */
 }
 function resolvePage(h){
   if(h==='dash/me'){const e=empOf(session.empId);return e?empPage(e):{t:'KPI của tôi',r:()=>'<div class="empty"><b>Tài khoản của bạn chưa được gắn với nhân viên nào.</b><br>Hãy nhờ Admin gắn tài khoản với tên của bạn ở Settings → User / Permission.</div>'}}
@@ -57,7 +58,7 @@ SUB.login=form=>{
   session={id:u.id,name:u.name,role:u.role,username:u.username,empId:u.empId||''};sessionStorage.setItem(SS_KEY,u.id);
   flipPage(u.name).then(()=>{$('#app').innerHTML='';render(false)});   /* lật trang sổ rồi mới vào app */
 };
-ACT.logout=()=>{session=null;sessionStorage.removeItem(SS_KEY);closeModal();$('#app').innerHTML='';render()};
+ACT.logout=()=>{notifStop();$('#npanel')?.remove();$('#npop')?.remove();session=null;sessionStorage.removeItem(SS_KEY);closeModal();$('#app').innerHTML='';render()};
 ACT.chpw=()=>{
   modal('Đổi mật khẩu',`<form id="mf" data-submit="chpw"><div class="fg">${inp('old','Mật khẩu hiện tại','',{type:'password',req:1,full:1})}${inp('n1','Mật khẩu mới (tối thiểu 6 ký tự)','',{type:'password',req:1,full:1,attrs:'minlength="6"'})}${inp('n2','Nhập lại mật khẩu mới','',{type:'password',req:1,full:1})}</div></form>`,{footer:cancelBtn+`<button class="btn primary" form="mf">Đổi mật khẩu</button>`});
 };

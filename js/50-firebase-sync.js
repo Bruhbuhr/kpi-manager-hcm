@@ -13,7 +13,7 @@
    ===================================================================== */
 const SYNC=['employees','sheets','groups'];
 /* Phiên bản Rules mà app này cần. Phải trùng dấu phiên bản trong firestore.rules (match /rulesCheck/{v}). */
-const RULES_VER='v4';
+const RULES_VER='v5';
 let rulesOld=false;
 /* Rules trên Firebase có phải bản mới nhất không? Bản cũ từ chối đường dẫn rulesCheck/<phiên bản>. */
 async function checkRules(){
@@ -189,7 +189,7 @@ ACT['fb-forgot']=async()=>{
 };
 if(CLOUD){
   SUB.login=async form=>{const d=fd(form);try{await fbAuth.signInWithEmailAndPassword(d.username.trim(),d.password)}catch(e){toast(authMsg(e),'error')}};
-  ACT.logout=async()=>{closeModal();try{await fbAuth.signOut()}catch(e){}};
+  ACT.logout=async()=>{closeModal();notifStop();$('#npanel')?.remove();$('#npop')?.remove();try{await fbAuth.signOut()}catch(e){}};
   SUB.chpw=async form=>{
     const d=fd(form);if(d.n1!==d.n2)return toast('Hai mật khẩu mới không khớp.','error');
     try{const u=fbAuth.currentUser;await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,d.old));await u.updatePassword(d.n1);closeModal();toast('Đã đổi mật khẩu.')}catch(e){toast(authMsg(e),'error')}
