@@ -773,3 +773,7 @@ html[data-theme="planner"] .nbk-tag h1{font-family:'Patrick Hand','Be Vietnam Pr
 .nbk-top .lm{display:inline-grid!important;width:auto!important;min-width:56px;height:48px;padding:0 12px;place-items:center;font-weight:700;font-size:16px}
 .nbk-top .lm-img{height:56px;width:auto;border-radius:6px;background:#fff;padding:3px}
 html[data-theme="bujo"] .nbk-top .lm{background:var(--acc)!important;color:#fff!important}
+/* biểu tượng sổ tay trong ô logo */
+.lg-t .nbico{width:26px;height:26px;display:block}
+.lm .nbico{width:30px;height:30px;display:block}
+.nbk-top .lm{padding:0 9px!important;min-width:52px}

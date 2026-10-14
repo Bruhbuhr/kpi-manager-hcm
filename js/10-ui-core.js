@@ -35,7 +35,9 @@ function flipPage(name){
   nb.classList.add('turn');
   return new Promise(r=>setTimeout(()=>{nb.closest('.login')?.classList.add('fade');setTimeout(r,260)},1000));
 }
-const logoBlock=()=>typeof LOGO_DATA!=='undefined'?`<img class="lm-img" src="${LOGO_DATA}" alt="Sổ tay công việc">`:'<div class="lm">Sổ</div>';
+/* Biểu tượng cuốn sổ tay (bìa có nhãn, dây chun, gáy lò xo) – tô theo màu chữ hiện tại */
+const NB_ICON='<svg class="nbico" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M8 2.5h10.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H8a1 1 0 0 1-1-1v-17a1 1 0 0 1 1-1Zm1.9 4v4.2h6.2V6.5ZM17.3 2.5h1.1v19h-1.1Z"/><path fill="currentColor" d="M10.9 8h4.2v1.1h-4.2z"/><g fill="currentColor"><rect x="4" y="5" width="4.6" height="1.7" rx=".85"/><rect x="4" y="9.2" width="4.6" height="1.7" rx=".85"/><rect x="4" y="13.4" width="4.6" height="1.7" rx=".85"/><rect x="4" y="17.6" width="4.6" height="1.7" rx=".85"/></g></svg>';
+const logoBlock=()=>typeof LOGO_DATA!=='undefined'?`<img class="lm-img" src="${LOGO_DATA}" alt="Sổ tay công việc">`:`<div class="lm" role="img" aria-label="Sổ tay công việc">${NB_ICON}</div>`;
 const PAL=['#2f7de1','#0e9f8b','#e29a2d','#6c5ce7','#ec6a5e','#22b8c9','#d6447a','#64748b','#84b33a','#9b7bf0'];
 /* Màu biểu đồ theo ý nghĩa */
 const CC={bar:'#2f7de1',low:'#dc4f47',line:'#0e9f8b',prev:'#a3abc4',xs:'#0e9f8b',tot:'#2f7de1',dat:'#a3abc4',cct:'#dc4f47'};

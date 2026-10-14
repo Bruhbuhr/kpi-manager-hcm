@@ -4,7 +4,7 @@
 
 /* ---------- sidebar / shell / router ---------- */
 function sideHTML(){
-  return `<div class="brand">${typeof LOGO_DATA!=='undefined'?`<img class="lg" src="${LOGO_DATA}" alt="Sổ tay công việc">`:'<div class="lg-t">Sổ</div>'}<div><b>Sổ tay công việc</b><span>${esc(db.company.name||'')}</span></div></div><nav class="nav">`+
+  return `<div class="brand">${typeof LOGO_DATA!=='undefined'?`<img class="lg" src="${LOGO_DATA}" alt="Sổ tay công việc">`:`<div class="lg-t" role="img" aria-label="Sổ tay công việc">${NB_ICON}</div>`}<div><b>Sổ tay công việc</b><span>${esc(db.company.name||'')}</span></div></div><nav class="nav">`+
   menu().map(g=>{
     const items=g.items;
     const active=ui.key.startsWith(g.g+'/');
