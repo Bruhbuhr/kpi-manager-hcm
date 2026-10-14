@@ -13,6 +13,28 @@ const PAGES={},ACT={},SUB={};
 let PAGE=null,S=null,T=null,IMP=null;
 const F=()=>(ui.f[ui.key]??={});
 const badge=(t,x)=>`<span class="bd ${t}">${esc(x)}</span>`;
+/* Màn hình đăng nhập = cuốn sổ tay mở: trang trái là bìa (tên app), trang phải là trang giấy có ô đăng nhập.
+   Đăng nhập đúng thì trang giấy lật sang trái (flipPage) rồi mới vào app. */
+function nbLogin(title,sub,formAttrs,body){
+  const co=(db&&db.company&&db.company.name)||'';
+  return `<div class="login nbl"><div class="nbk" id="nbk">
+    <div class="nbk-cover"><div class="nbk-band" aria-hidden="true"></div><div class="nbk-top">${logoBlock()}</div>
+      <div class="nbk-tag"><h1>${esc(title)}</h1><p>${esc(sub)}</p></div>
+      <div class="nbk-foot">${co?`<b>${esc(co)}</b>`:''}${creditHTML('nbk-credit')}</div></div>
+    <div class="nbk-spine" aria-hidden="true"></div>
+    <div class="nbk-right">
+      <div class="nbk-page nbk-under" aria-hidden="true"><div class="nbk-hello" id="nbk-hello">Đang mở sổ…</div></div>
+      <div class="nbk-leaf"><form class="nbk-page nbk-front lcard" ${formAttrs}><h2 class="nbk-h">Đăng nhập</h2>${body}</form><div class="nbk-page nbk-back" aria-hidden="true"></div></div>
+    </div></div></div>`;
+}
+function flipPage(name){
+  const nb=$('#nbk');if(!nb)return Promise.resolve();
+  const h=$('#nbk-hello');if(h){const w=String(name||'').trim().split(/\s+/).filter(Boolean);h.textContent=`Chào ${w.length?(w.length<=2?w.join(' '):w[w.length-1]):'bạn'}! Đang mở sổ…`}
+  const btn=nb.querySelector('button.primary');if(btn)btn.disabled=true;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return new Promise(r=>setTimeout(r,300));
+  nb.classList.add('turn');
+  return new Promise(r=>setTimeout(()=>{nb.closest('.login')?.classList.add('fade');setTimeout(r,260)},1000));
+}
 const logoBlock=()=>typeof LOGO_DATA!=='undefined'?`<img class="lm-img" src="${LOGO_DATA}" alt="Sổ tay công việc">`:'<div class="lm">Sổ</div>';
 const PAL=['#2f7de1','#0e9f8b','#e29a2d','#6c5ce7','#ec6a5e','#22b8c9','#d6447a','#64748b','#84b33a','#9b7bf0'];
 /* Màu biểu đồ theo ý nghĩa */

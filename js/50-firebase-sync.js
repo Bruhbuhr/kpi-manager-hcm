@@ -69,6 +69,7 @@ async function bootSession(u){
     if(p.active===false){toast('Tài khoản đã bị khoá.','error');await fbAuth.signOut();return}
     if(!ROLES[p.role]){toast('Tài khoản chưa được cấp vai trò. Hãy liên hệ Admin.','error');await fbAuth.signOut();return}
     session={id:u.uid,name:p.name||u.email,role:p.role,username:u.email,empId:p.empId||''};
+    if($('#nbk'))await flipPage(session.name);   /* vừa đăng nhập từ màn hình sổ tay: lật trang rồi mới tải dữ liệu */
     startSync();
   }catch(e){toast(authMsg(e),'error');try{await fbAuth.signOut()}catch(x){}}
 }
@@ -170,7 +171,7 @@ async function commitOps(ops){
 function cloudLoginView(){
   /* Màn hình "Thiết lập lần đầu" chỉ mở khi địa chỉ có ?setup=1 (Admin dùng đúng một lần). Người dùng thường không thấy link này. */
   const canSetup=setupUrl(),setup=canSetup&&ui.loginMode==='setup';
-  $('#app').innerHTML=`<div class="login"><form class="lcard" data-submit="${setup?'fb-setup':'login'}">${logoBlock()}<h1>${setup?'Thiết lập lần đầu':'Sổ tay công việc'}</h1><p>${setup?'Tạo tài khoản Admin':'Ghi việc mỗi ngày, xem KPI theo tháng · quý · năm'}</p>
+  $('#app').innerHTML=nbLogin(setup?'Thiết lập lần đầu':'Sổ tay công việc',setup?'Tạo tài khoản Admin':'Ghi việc mỗi ngày, xem KPI theo tháng · quý · năm',`data-submit="${setup?'fb-setup':'login'}"`,`
     ${inp('username','Email',setup?ADMIN:'',{req:1,type:'email',attrs:'autocomplete="username" autofocus'+(setup&&ADMIN?' readonly':'')})}
     ${setup?inp('name','Họ tên','',{req:1}):''}
     ${inp('password','Mật khẩu'+(setup?' (tối thiểu 6 ký tự)':''),'',{type:'password',req:1,attrs:`autocomplete="${setup?'new-password':'current-password'}" ${setup?'minlength="6"':''}`})}
@@ -178,7 +179,7 @@ function cloudLoginView(){
     <button class="btn primary block">${setup?'Tạo tài khoản Admin':'Đăng nhập'}</button>
     ${setup?`<div class="hint">Chỉ dùng cho lần đầu tiên khi hệ thống chưa có ai. Tài khoản Admin duy nhất là <b>${esc(ADMIN||'người thiết lập đầu tiên')}</b>; mọi người khác do Admin tạo tài khoản.</div>`:'<button type="button" class="lnk" data-act="fb-forgot">Quên mật khẩu?</button>'}
     ${canSetup?`<button type="button" class="lnk" data-act="fb-mode">${setup?'← Quay lại đăng nhập':'Thiết lập lần đầu (chưa có tài khoản Admin)'}</button>`:''}
-    ${FIREBASE_CONFIG?'':'<button type="button" class="lnk" data-act="fb-disconnect">Ngắt kết nối Firebase (chế độ cục bộ)</button>'}</form>${creditHTML('login-credit')}</div>`;
+    ${FIREBASE_CONFIG?'':'<button type="button" class="lnk" data-act="fb-disconnect">Ngắt kết nối Firebase (chế độ cục bộ)</button>'}`);
 }
 const setupUrl=()=>/[?&]setup(=|&|$)/.test(location.search);
 ACT['fb-mode']=()=>{if(!setupUrl())return;ui.loginMode=ui.loginMode==='setup'?'login':'setup';cloudLoginView()};

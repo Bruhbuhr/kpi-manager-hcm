@@ -48,14 +48,14 @@ window.addEventListener('hashchange',()=>render(false));
 /* ---------- đăng nhập ---------- */
 function loginView(){
   if(CLOUD)return cloudLoginView();
-  $('#app').innerHTML=`<div class="login"><form class="lcard" data-submit="login">${logoBlock()}<h1>Sổ tay công việc</h1><p>Ghi việc mỗi ngày, xem KPI theo tháng · quý · năm</p>${inp('username','Tên đăng nhập','',{req:1,attrs:'autocomplete="username" autofocus'})}${inp('password','Mật khẩu','',{type:'password',req:1,attrs:'autocomplete="current-password"'})}<button class="btn primary block">Đăng nhập</button><div class="hint">Chế độ dùng thử trên máy này. Tài khoản mặc định: <b>admin</b> / <b>admin123</b>. Để mỗi nhân viên chỉ thấy việc của mình một cách bảo mật, cần bật Firebase.</div><button type="button" class="lnk" data-act="fb-config">Kết nối Firebase để dùng chung dữ liệu…</button></form>${creditHTML('login-credit')}</div>`;
+  $('#app').innerHTML=nbLogin('Sổ tay công việc','Ghi việc mỗi ngày, xem KPI theo tháng · quý · năm','data-submit="login"',`${inp('username','Tên đăng nhập','',{req:1,attrs:'autocomplete="username" autofocus'})}${inp('password','Mật khẩu','',{type:'password',req:1,attrs:'autocomplete="current-password"'})}<button class="btn primary block">Đăng nhập</button><div class="hint">Chế độ dùng thử trên máy này. Tài khoản mặc định: <b>admin</b> / <b>admin123</b>. Để mỗi nhân viên chỉ thấy việc của mình một cách bảo mật, cần bật Firebase.</div><button type="button" class="lnk" data-act="fb-config">Kết nối Firebase để dùng chung dữ liệu…</button>`);
 }
 SUB.login=form=>{
   const d=fd(form),u=db.users.find(x=>x.username.toLowerCase()===d.username.trim().toLowerCase());
   if(!u||!u.active||u.pass!==pw(d.password))return toast('Sai tên đăng nhập hoặc mật khẩu.','error');
   if(!ROLES[u.role])return toast('Tài khoản chưa được cấp vai trò. Liên hệ Admin.','error');
   session={id:u.id,name:u.name,role:u.role,username:u.username,empId:u.empId||''};sessionStorage.setItem(SS_KEY,u.id);
-  $('#app').innerHTML='';render(false);
+  flipPage(u.name).then(()=>{$('#app').innerHTML='';render(false)});   /* lật trang sổ rồi mới vào app */
 };
 ACT.logout=()=>{session=null;sessionStorage.removeItem(SS_KEY);closeModal();$('#app').innerHTML='';render()};
 ACT.chpw=()=>{
