@@ -7,7 +7,7 @@
    ===================================================================== */
 const ui={key:'',f:{},open:{},charts:[],cur:null};
 /* Ghi công tác giả – hiện ở menu trái, cuối mỗi trang, màn hình đăng nhập và báo cáo in */
-const CREDIT='📒 Sổ tay công việc · chỉ dùng trong nội bộ';
+const CREDIT='📒 Sổ tay công việc · chỉ lưu hành trong nội bộ';
 const creditHTML=(cls='credit')=>`<div class="${cls}">${esc(CREDIT)}</div>`;
 const PAGES={},ACT={},SUB={};
 let PAGE=null,S=null,T=null,IMP=null;

@@ -127,4 +127,4 @@ Với Firebase, quyền được kiểm tra ở máy chủ bằng `firestore.rul
 - Thanh đỏ dưới màn hình cho biết **tên file và số dòng** gây lỗi; màn hình “Thiếu file chương trình” nghĩa là quên upload một file trong `js/`.
 
 ---
-📒 Sổ tay công việc · chỉ dùng trong nội bộ
+📒 Sổ tay công việc · chỉ lưu hành trong nội bộ
