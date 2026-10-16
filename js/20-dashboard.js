@@ -18,7 +18,7 @@ const badNum=n=>n?`<span class="tag-bad">${n}</span>`:'0';
 function stBd(t,sc,year){
   switch(sc.state){
     case 'moved':return badge('mute','↪ Đã chuyển sang '+mLbl(t.movedTo.month,t.movedTo.year,year));
-    case 'ontime':return badge('ok','✓ Đúng hạn');
+    case 'ontime':{const o=t.submitted<t.deadline?offDay(t.deadline):'';return badge('ok','✓ Đúng hạn')+(o?`<small title="Deadline rơi vào ${o} (ngày nghỉ). Điểm thưởng chỉ tính theo ngày làm việc nên hoàn thành ngày làm việc cuối trước đó là đúng hạn.">deadline ${o}</small>`:'')}
     case 'early':return badge('ok',`▲ Sớm ${-sc.late} ngày`);
     case 'late':return badge(sc.late>10?'bad':'warn',`! Trễ ${sc.late} ngày`);
     case 'overdue':return badge('bad',`! Quá hạn ${sc.overdue} ngày`);

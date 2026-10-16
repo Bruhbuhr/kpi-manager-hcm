@@ -62,6 +62,9 @@ const dayNum=iso=>{const [y,m,d]=iso.split('-').map(Number);return Math.round(Da
 const isoOf=n=>new Date(n*864e5).toISOString().slice(0,10);
 let _hol=null;
 const holSet=()=>_hol||(_hol=new Set(db.company.holidays||[]));
+/* Ngày nghỉ (Thứ 7, Chủ nhật, ngày lễ) – dùng để giải thích vì sao hoàn thành trước một ngày nghỉ không có điểm thưởng */
+const DOW=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+const offDay=iso=>{if(!iso)return'';const wd=new Date(dayNum(iso)*864e5).getUTCDay();return wd===0||wd===6?DOW[wd]:holSet().has(iso)?'ngày lễ':''};
 function networkdays(a,b){let n=0;const H=holSet();for(let x=a;x<=b;x++){const wd=new Date(x*864e5).getUTCDay();if(wd!==0&&wd!==6&&!H.has(isoOf(x)))n++}return n}
 function scoreTask(t,today=todayStr()){
   const r={w:+t.weight||0,late:null,base:null,bonus:null,comp:null,state:'nodate',overdue:0,ap:apOf(t),counted:false};
