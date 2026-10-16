@@ -45,7 +45,7 @@ Các tháng trước tháng áp dụng giữ cách tính cũ (100% công việc,
 | Mục | Quy tắc |
 |---|---|
 | Trọng số | Nhân viên tự chấm, số nguyên 1–10. Tổng trọng số chuẩn của một tháng là 100 |
-| Số ngày trễ (F) | So Ngày hoàn thành với Deadline. Trễ: ngày lịch. Sớm: ngày làm việc (bỏ Thứ 7, Chủ nhật, ngày lễ), ra số âm, không bao giờ bị tính thành trễ |
+| Số ngày trễ (F) | So Ngày hoàn thành với Deadline. Trễ: ngày lịch. Sớm: ngày làm việc Thứ 2 – Thứ 7 (bỏ Chủ nhật, ngày lễ; khác file Excel cũ vốn bỏ cả Thứ 7), ra số âm, không bao giờ bị tính thành trễ |
 | Điểm cơ bản (G) | 100 − 3 × số ngày trễ (không âm) |
 | Điểm thưởng (H, tự động) | `=IF(F<0, MIN(30, ABS(F)*3), 0)`. Không nhập tay |
 | Điểm thành phần (I) | `=(G × Trọng số + H) / 100`. Đây là điểm KPI của từng việc |
@@ -54,9 +54,10 @@ Các tháng trước tháng áp dụng giữ cách tính cũ (100% công việc,
 | KPI quý / năm | Trung bình các tháng **đã có điểm và đã kết thúc**. Tháng chưa có điểm không tính là 0; tháng đang diễn ra chỉ là điểm tạm tính |
 | Xếp loại | Xuất sắc ≥ 120 · Tốt 100–119 · Đạt 80–99 · Cần cải thiện < 80 |
 
-Hai điểm khác file Excel gốc (cố ý):
+Ba điểm khác file Excel gốc (cố ý):
 1. Sheet `Summary` của Excel lấy trung bình cả 12 tháng, tháng chưa có điểm tính là 0. App chỉ tính tháng đã có điểm.
 2. Công thức Excel tính nhầm “hoàn thành sớm vào cuối tuần” thành trễ 1 ngày (ví dụ deadline Chủ nhật, hoàn thành Thứ 7). App tính là đúng hạn.
+3. Thứ 7 là ngày làm việc khi tính hoàn thành sớm (Excel cũ bỏ cả Thứ 7). Ví dụ deadline Thứ 7, hoàn thành Thứ 6 = sớm 1 ngày, +3 điểm thưởng.
 
 ## Cấu trúc thư mục
 ```
