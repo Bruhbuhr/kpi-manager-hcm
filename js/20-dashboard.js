@@ -32,7 +32,7 @@ function scopeStats(f){const y=f.year||curYear();return sortedEmps().filter(e=>(
 const sumK=(rows,k)=>rows.reduce((a,r)=>a+r.ys[k],0);
 const dueOf=(y,i)=>i===11?`${+y+1}-01-07`:`${y}-${MM[i+1]}-07`;   /* hạn nộp bản đánh giá: tuần đầu tháng sau */
 const scopeBar=(extra='')=>{F().year??=curYear();return `<label class="fl">Năm ${fSel('year','Năm',yearOpts())}</label>${isStaff()?'':fSel('dept','Nhóm',deptOpts('Mọi nhóm'))}${extra}`};
-const addBtns=()=>can('admin')?'<button class="btn" data-act="imp-open">⬆ Nhập Excel KPI</button><button class="btn acc" data-act="emp-new">＋ Thêm nhân viên</button>':'';
+const addBtns=()=>can('admin')?'<button class="btn" data-act="imp-open">⬆ Nhập Excel KPI</button><button class="btn acc" data-act="emp-new">＋ Thêm nhân viên</button>':can('manage')?'<button class="btn" data-act="imp-open">⬆ Nhập Excel KPI</button>':'';
 
 /* ---------- biểu đồ KPI: trục 0–130, vạch xếp loại 80 / 100 / 120, nhãn giá trị trên cột ---------- */
 /* Biểu đồ hẹp (điện thoại) bỏ phần lề phải dành cho tên mốc xếp loại */

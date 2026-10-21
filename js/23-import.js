@@ -31,24 +31,37 @@ function parseKpiWorkbook(wb){
   if(!found)throw new Error('không có sheet tháng nào (M01…M12).');
   return{code:String(code).trim(),name:String(name).trim(),year,months,total};
 }
+/* Quyền nhập: Admin – mọi file, tạo được nhân viên mới · Quản lý – nhân viên đã có trong danh sách · Nhân viên – chỉ file của chính mình (Mã NV trùng),
+   mọi việc vào trạng thái Chờ duyệt, không ghi đè năm đã có việc được quản lý Duyệt. Trả về '' khi được nhập, ngược lại là lý do. */
+const impMode=()=>can('admin')?'admin':can('manage')?'mgr':isStaff()&&session.empId?'staff':'';
+function impBlock(d){
+  const m=impMode(),e=empByCode(d.code);
+  if(m==='admin')return '';
+  if(!e)return m==='mgr'?`Mã NV ${d.code} chưa có trong danh sách nhân viên. Nhờ Admin thêm nhân viên trước.`:`Mã NV ${d.code} trong file không phải mã của bạn.`;
+  if(m==='mgr')return '';
+  if(e.id!==session.empId)return `Mã NV ${d.code} trong file không phải mã của bạn.`;
+  const sh=sheetOf(e.id,d.year);if(sh&&MM.some(mm=>sh.months[mm].tasks.some(t=>apOf(t)==='ok')))return `năm ${d.year} đã có việc được quản lý Duyệt nên không ghi đè được. Nhờ quản lý nhập giúp.`;
+  return '';
+}
 ACT['imp-open']=()=>{
-  if(!can('admin'))return toast('Chỉ Admin được nhập file Excel.','error');
+  const mode=impMode();if(!mode)return toast('Tài khoản chưa được gắn với nhân viên nên chưa nhập được file.','error');
   IMP={items:[]};
   modal('Nhập file Excel KPI cá nhân',`<form id="mf" data-submit="imp-save">
-    <p class="note" style="padding-top:0">Chọn một hoặc nhiều file <b>.xlsx</b> theo mẫu <b>KPI_Individual_report</b> (sheet Summary + M01…M12). Mỗi file là một nhân viên trong một năm. Nhân viên chưa có trong danh sách sẽ được tạo mới theo Mã NV.</p>
+    <p class="note" style="padding-top:0">Chọn một hoặc nhiều file <b>.xlsx</b> theo mẫu <b>KPI_Individual_report</b> (sheet Summary + M01…M12). Mỗi file là một nhân viên trong một năm. ${mode==='admin'?'Nhân viên chưa có trong danh sách sẽ được tạo mới theo Mã NV.':mode==='mgr'?'Chỉ nhập được cho nhân viên đã có trong danh sách (khớp theo Mã NV).':'Bạn chỉ nhập được file KPI của chính mình (Mã NV trong file phải trùng mã của bạn). Mọi việc sẽ ở trạng thái <b>Chờ duyệt</b> để quản lý duyệt trên app.'}</p>
     <div class="drop" id="imp-drop"><input class="in" type="file" id="imp-file" accept=".xlsx,.xlsm" multiple aria-label="File Excel KPI cá nhân"><small class="muted">hoặc kéo thả file vào đây</small></div>
-    <label class="chk" style="margin-top:10px"><input type="checkbox" id="imp-ap" checked> Coi các việc đã có điểm trong file là đã được quản lý <b>Duyệt</b>. Bỏ chọn nếu muốn duyệt lại từng việc trên app (khi đó KPI chưa được tính).</label>
+    ${mode==='staff'?'':`<label class="chk" style="margin-top:10px"><input type="checkbox" id="imp-ap" checked> Coi các việc đã có điểm trong file là đã được quản lý <b>Duyệt</b>. Bỏ chọn nếu muốn duyệt lại từng việc trên app (khi đó KPI chưa được tính).</label>`}
     <div id="imp-list"></div></form>`,{footer:cancelBtn+'<button class="btn primary" form="mf" id="imp-ok" disabled>Nhập</button>',size:'mid'});
   const dz=$('#imp-drop');
   ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over')}));
   ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over')}));
   dz.addEventListener('drop',e=>impRead(e.dataTransfer.files));
   $('#imp-file').addEventListener('change',e=>impRead(e.target.files));
-  $('#imp-ap').addEventListener('change',impRender);
+  $('#imp-ap')?.addEventListener('change',impRender);
 };
 /* Bảng tháng dùng để nhập: khi chọn "coi là đã Duyệt", việc đã có Deadline + Ngày hoàn thành và cột Quản lý duyệt để trống được ghi Duyệt */
 function impMonths(d){
-  const auto=$('#imp-ap')?$('#imp-ap').checked:true,ms=JSON.parse(JSON.stringify(d.months));
+  const staff=impMode()==='staff',auto=!staff&&($('#imp-ap')?$('#imp-ap').checked:true),ms=JSON.parse(JSON.stringify(d.months));
+  if(staff)MM.forEach(mm=>ms[mm].tasks.forEach(t=>{t.approval=''}));   /* nhân viên tự nhập: tất cả chờ quản lý duyệt */
   if(auto)MM.forEach(mm=>ms[mm].tasks.forEach(t=>{if(t.deadline&&t.submitted&&!t.approval)t.approval=AP_VAL.ok}));
   return ms;
 }
@@ -64,9 +77,9 @@ async function impRead(files){
   if(!IMP)return;IMP.items=items;impRender();
 }
 function impRender(){
-  const box=$('#imp-list'),ok=$('#imp-ok');if(!box)return;const good=IMP.items.filter(x=>x.d);
+  const box=$('#imp-list'),ok=$('#imp-ok');if(!box)return;IMP.items.forEach(x=>{if(x.d){const why=impBlock(x.d);if(why){x.err=why;x.d=null}}});const good=IMP.items.filter(x=>x.d);
   box.innerHTML=IMP.items.length?miniTable(['File','Nhân viên','Năm','Số việc','KPI trung bình','Kết quả'],IMP.items.map(x=>{
-    if(x.err)return `<tr><td>${esc(x.file)}</td><td colspan="4" class="tag-bad">File ${esc(x.err)}</td><td>${badge('bad','Bỏ qua')}</td></tr>`;
+    if(x.err)return `<tr><td>${esc(x.file)}</td><td colspan="4" class="tag-bad">${/^không/.test(x.err)?'File ':''}${esc(x.err)}</td><td>${badge('bad','Bỏ qua')}</td></tr>`;
     const e=empByCode(x.d.code),ms=impMonths(x.d),ys=yearStats({year:x.d.year,months:ms}),has=e&&sheetOf(e.id,x.d.year);
     const odd=MM.reduce((a,mm)=>a+ms[mm].tasks.filter(t=>!(Number.isInteger(+t.weight)&&+t.weight>=W_MIN&&+t.weight<=W_MAX)).length,0);
     return `<tr><td>${esc(x.file)}</td><td><b>${esc(x.d.name)}</b><small>${esc(x.d.code)}${e?'':' · nhân viên mới'}</small></td><td class="num">${x.d.year}</td><td class="num">${x.d.total}<small>${ys.counted} đã duyệt · ${ys.pending} chờ duyệt${ys.recheck?' · '+ys.recheck+' Re-check':''}</small></td><td class="num">${fmtK(ys.avg)}<small>${ys.ev.length} tháng có điểm</small></td><td>${has?badge('warn','Ghi đè bảng KPI '+x.d.year):badge('ok','Thêm mới')}${odd?`<small class="tag-warn">${odd} việc có trọng số ngoài thang ${W_MIN}–${W_MAX}</small>`:''}</td></tr>`})):'' ;
@@ -74,8 +87,9 @@ function impRender(){
   if(ok){ok.disabled=!good.length;ok.textContent=good.length?`Nhập ${good.length} file`:'Nhập'}
 }
 SUB['imp-save']=()=>{
-  if(!IMP||!can('admin'))return;const good=IMP.items.filter(x=>x.d);if(!good.length)return;let lastId=null,lastY=null;
+  if(!IMP||!impMode())return;const good=IMP.items.filter(x=>x.d);if(!good.length)return;let lastId=null,lastY=null;
   const ok=transact(()=>{good.forEach(({d})=>{
+    const why=impBlock(d);if(why)throw new Error(why);
     let e=empByCode(d.code);if(!e){e={id:uid('e'),code:d.code,name:d.name,dept:'',title:'',email:'',note:'',active:true,createdAt:Date.now()};db.employees.push(e)}
     db.sheets=db.sheets.filter(s=>s.id!==sheetId(e.id,d.year));
     db.sheets.push({id:sheetId(e.id,d.year),empId:e.id,year:d.year,months:impMonths(d),updatedAt:todayStr(),source:'Excel'});lastId=e.id;lastY=d.year})});
