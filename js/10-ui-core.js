@@ -47,6 +47,7 @@ const MENU=[
  {g:'dash',icon:'📊',label:'Dashboard',items:[['me','KPI của tôi','me'],['overview','Tổng quan','mgr'],['month','KPI theo tháng','mgr'],['rank','Xếp hạng nhân viên','mgr']]},
  {g:'emp',icon:'👥',label:'Nhân viên',items:[['list','Tất cả nhân viên','mgr'],['dept','Theo nhóm','mgr']]},
  {g:'rpt',icon:'📅',label:'Báo cáo',items:[['employee','Theo nhân viên'],['monthly','Theo tháng'],['quarter','Theo quý'],['dept','Theo nhóm','mgr']]},
+ {g:'ppe',icon:'🦺',label:'Quản lý PPE',items:[['issue','Sổ cấp phát','mgr'],['proj','Theo dự án','mgr'],['due','Đến hạn thay','mgr'],['cat','Danh mục & dự án','mgr']]},
  {g:'help',icon:'📘',label:'Quy chế',items:[['rules','Quy chế KPI']]},
  {g:'set',icon:'⚙️',label:'Settings',items:[['org','Nhóm & ngày lễ','admin'],['users','User / Permission','admin'],['system','Sao lưu & Hệ thống','admin']]}
 ];
@@ -180,6 +181,7 @@ function printClean(clone,src){
     if(f&&f.classList.contains('cmt')){d.className='cmtp';d.innerHTML=`<b>${esc(f.querySelector('label span')?.textContent||'Nhận xét của quản lý')}:</b> ${v?esc(v):'<i>(chưa có nhận xét)</i>'}`}
     else{d.className='mc';d.textContent=v}
     (f||x).replaceWith(d)});
+  $$('.ntp',clone).forEach(x=>x.hidden=false);   /* ghi chú: bản in hiện đủ chữ thay cho icon 📄 */
   $$('th.act,td.act,.acts,.bar,.seg,p.hint,.meta',clone).forEach(x=>x.remove());
   $$('button',clone).forEach(x=>{if(!x.closest('.mstrip'))x.remove()});
 }

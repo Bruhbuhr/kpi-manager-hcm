@@ -61,6 +61,15 @@ function loadSample(){
     mk(1,pm,g1.title,g1.deadline,g1.submitted,AP_VAL.ok).gid=g1.id;mk(5,pm,g1.title,g1.deadline,g1.submitted,'').gid=g1.id;
     const g2={id:uid('g')+'2',title:'Kiểm kê thiết bị IT cuối quý',deadline:iso(cm,25),submitted:null,doneBy:null,members:[E2(6).id],invited:[E2(0).id],declined:[],names:{[E2(6).id]:E2(6).name,[E2(0).id]:E2(0).name},invitedBy:{[E2(0).id]:{empId:E2(6).id,name:E2(6).name,at:today}},year:y,mm:pad(cm),by:'',byName:E2(6).name,createdAt:today};
     mk(6,cm,g2.title,g2.deadline,null,'').gid=g2.id;db.groups=[g1,g2]}
+  /* PPE mẫu: 2 dự án tên giả, công nhân tên giả; vài món sắp đến hạn / quá hạn thay để xem màu */
+  {const P1={id:'pj_s1',kind:'proj',code:'MAU-P01',name:'Nhà máy mẫu A – lắp đặt HVAC',site:'KCN mẫu, Bình Dương',start:`${y-1}-11-01`,end:'',status:'run',note:'Dữ liệu mẫu'},
+    P2={id:'pj_s2',kind:'proj',code:'MAU-P02',name:'Văn phòng mẫu B – cải tạo phòng sạch',site:'Quận mẫu, TP.HCM',start:`${y}-03-01`,end:'',status:'run',note:'Dữ liệu mẫu'};
+    const W=[['CN-01','Ngô Văn Tài','Tổ cơ điện','pj_s1'],['CN-02','Lý Minh Phúc','Tổ cơ điện','pj_s1'],['CN-03','Trịnh Quang Vinh','Tổ ống gió','pj_s1'],['CN-04','Mai Hữu Nghĩa','Nhà thầu phụ mẫu','pj_s2'],['CN-05','Tạ Thanh Sơn','Tổ hoàn thiện','pj_s2']];
+    const sz={pi_uni:['M','L','XL'],pi_shoe:['40','41','42']},back=d=>isoOf(dayNum(today)-d);db.ppe=[P1,P2];
+    W.forEach(([code,name,dept,proj],i)=>{const base=back(40+i*55),rc='r_s'+i;
+      ['pi_uni','pi_shoe','pi_helm','pi_glass','pi_ear',...(proj==='pj_s1'?['pi_harn']:[])].forEach((it,k)=>{if(i===4&&it==='pi_ear')return;
+        const date=it==='pi_glass'?back(150+i*10):base;db.ppe.push({id:`pp_s${i}_${k}`,kind:'issue',rcpt:it==='pi_glass'?rc+'g':rc,proj,date,code,name,dept,item:it,size:sz[it]?sz[it][i%3]:'',qty:it==='pi_uni'?2:1,reason:'new',signed:i!==3,returned:null,note:'',by:'Quản lý',at:date})})});
+    db.ppe.push({id:'pp_s9',kind:'issue',rcpt:'r_s9',proj:'pj_s1',date:back(10),code:'CN-02',name:'Lý Minh Phúc',dept:'Tổ cơ điện',item:'pi_glass',size:'',qty:1,reason:'damaged',signed:true,returned:null,note:'Kính cũ bị nứt',by:'Quản lý',at:back(10)});}
   /* Chế độ cục bộ: thêm 2 tài khoản dùng thử để xem màn hình của Quản lý và Nhân viên (không tạo khi dùng Firebase) */
   if(!CLOUD){
     const add=(username,name,role,empId)=>{if(!db.users.some(x=>x.username===username))db.users.push({id:uid('u'),username,name,role,empId:empId||'',pass:pw(username+'123'),active:true});else{const x=db.users.find(x=>x.username===username);x.empId=empId||''}};

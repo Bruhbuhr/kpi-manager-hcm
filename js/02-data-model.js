@@ -28,7 +28,7 @@ function defaultDB(){return{
   seq:{NV:0},
   company:{name:'TVE-HCM · KPI nhân viên',note:'',depts:[...DEFAULT_DEPTS],holidays:[...DEFAULT_HOLIDAYS]},
   users:[{id:'u_admin',username:'admin',name:'Quản trị',role:'admin',pass:pw('admin123'),active:true}],
-  employees:[],sheets:[],groups:[]
+  employees:[],sheets:[],groups:[],ppe:[]
 }}
 function emptyCloudDB(){const d=defaultDB();d.users=[];return d}
 let db=null, session=null;
@@ -39,6 +39,7 @@ function migrate(){const d=defaultDB();for(const k in d){if(db[k]===undefined)db
   if(!Array.isArray(db.company.holidays))db.company.holidays=[...DEFAULT_HOLIDAYS];
   db.employees.forEach(e=>{if(e.active===undefined)e.active=true});
   if(!Array.isArray(db.groups))db.groups=[];
+  if(!Array.isArray(db.ppe))db.ppe=[];
   if(!Array.isArray(db.notifs))db.notifs=[];
   db.sheets.forEach(s=>{if(!s.months)s.months={};MM.forEach(m=>{const x=s.months[m]||(s.months[m]={tasks:[],comment:''});if(!Array.isArray(x.tasks))x.tasks=[];if(x.comment==null)x.comment=''})});
   _hol=null;hydrateGroups()}
@@ -112,7 +113,7 @@ function monthStats(m,ym){
      kpi = điểm chính thức (chỉ việc đã Duyệt) · self = điểm tự chấm (đã Duyệt + chờ duyệt, không gồm Re-check)
      Quy chế 80/20: raw / weight chỉ gồm việc By User; việc By Manager đếm ở bm*; lateList / ncList = tuân thủ */
   const st={rows,v2,n:0,weight:0,raw:0,rawSelf:0,bonus:0,scored:0,counted:0,pending:0,recheck:0,ontime:0,early:0,late:0,open:0,nodate:0,overdue:0,moved:0,kpi:null,self:null,
-    bmN:0,bmOk:0,bmPend:0,bmRe:0,lateList:[],ncList:[],p80:null,p20:null,pMgr:null,pComp:null};
+    bmN:0,bmOk:0,bmPend:0,bmRe:0,bmPer:0,lateList:[],ncList:[],p80:null,p20:null,pMgr:null,pComp:null};
   for(const {t,sc} of rows){
     if(sc.state==='moved'){st.moved++;continue}
     st.n++;st[sc.state]++;
@@ -127,10 +128,12 @@ function monthStats(m,ym){
   const cap=v=>Math.min(KPI_CAP,Math.max(0,v));
   if(v2){
     st.lateList=[...((m&&m.late)||[])].sort((a,b)=>a.d<b.d?-1:1);st.ncList=[...((m&&m.nc)||[])].sort((a,b)=>a.d<b.d?-1:1);
-    st.pMgr=Math.min(P.mgrMax,P.perTask*st.bmOk);
+    /* việc quản lý giao: ${mgrMax} điểm chia đều cho số việc giao trong tháng (10 việc → 1 điểm/việc, 5 việc → 2, 8 việc → 1,25) */
+    st.bmPer=st.bmN?P.mgrMax/st.bmN:0;
+    st.pMgr=r2(Math.min(P.mgrMax,st.bmPer*st.bmOk));
     st.pComp=Math.max(0,P.compMax-P.latePen*st.lateList.length-P.ncPen*st.ncList.length);
     st.p20=st.pMgr+st.pComp;st.p80=st.raw;
-    const mgrSelf=Math.min(P.mgrMax,P.perTask*(st.bmOk+st.bmPend));
+    const mgrSelf=Math.min(P.mgrMax,st.bmPer*(st.bmOk+st.bmPend));
     if(st.counted)st.kpi=cap(st.raw+st.p20);
     if(st.counted+st.pending)st.self=cap(st.rawSelf+mgrSelf+st.pComp);
   }else{

@@ -11,9 +11,9 @@
      ở users/{uid}; Firestore Security Rules (file firestore.rules) chặn
      truy cập trái phép ở phía máy chủ.
    ===================================================================== */
-const SYNC=['employees','sheets','groups'];
+const SYNC=['employees','sheets','groups','ppe'];   /* ppe: chỉ Admin + Quản lý */
 /* Phiên bản Rules mà app này cần. Phải trùng dấu phiên bản trong firestore.rules (match /rulesCheck/{v}). */
-const RULES_VER='v5';
+const RULES_VER='v6';
 let rulesOld=false;
 /* Rules trên Firebase có phải bản mới nhất không? Bản cũ từ chối đường dẫn rulesCheck/<phiên bản>. */
 async function checkRules(){
@@ -97,9 +97,10 @@ function startSync(){
       [['m','members'],['i','invited']].forEach(([k,f])=>unsubs.push(fbStore.collection('groups').where(f,'array-contains',eid).onSnapshot(s=>{gp[k]={};s.docs.forEach(d=>gp[k][d.id]=d);gUpd()},e=>{softFail(e);gp[k]={};gUpd()})));
     }
     if(!eid)mark('groups');
+    mark('ppe');   /* nhân viên không tải dữ liệu PPE */
     /* danh bạ trong phòng (tên, mã NV, nhóm) để chọn người làm chung */
     unsubs.push(fbStore.doc('config/directory').onSnapshot(s=>{DIR=s.exists&&Array.isArray(s.data().list)?s.data().list:[]},softFail));
-  }else SYNC.forEach(col=>unsubs.push(fbStore.collection(col).onSnapshot(s=>{applyRemote(col,s.docChanges());mark(col)},col==='groups'?e=>{softFail(e);mark(col)}:fail)));
+  }else SYNC.forEach(col=>unsubs.push(fbStore.collection(col).onSnapshot(s=>{applyRemote(col,s.docChanges());mark(col)},col==='groups'||col==='ppe'?e=>{softFail(e);mark(col)}:fail)));
   unsubs.push(fbStore.doc('config/company').onSnapshot(s=>{if(s.exists){const d=s.data();remoteCfg.company=canon(d);db.company={...db.company,...d};scheduleRender()}mark('company')},fail));
   unsubs.push(fbStore.doc('config/seq').onSnapshot(s=>{if(s.exists){const d=s.data();remoteCfg.seq=canon(d);for(const k in d)db.seq[k]=Math.max(db.seq[k]||0,+d[k]||0)}mark('seq')},fail));
   const uMap=(id,d)=>({id,username:d.email||'',name:d.name||'',role:d.role,empId:d.empId||'',active:d.active!==false,deleted:!!d.deleted});
@@ -141,9 +142,10 @@ function cloudPush(){
   const ops=[];
   SYNC.forEach(col=>{
     if(col==='employees'&&session.role!=='admin')return;   /* danh sách nhân viên: chỉ Admin ghi */
+    if(col==='ppe'&&staff)return;                           /* PPE: chỉ Admin + Quản lý */
     const cur={};db[col].forEach(r=>{cur[r.id]=canon(r)});const old=remote[col];
     for(const id in cur)if(old[id]!==cur[id])ops.push({col,id,data:JSON.parse(cur[id])});
-    if(session.role==='admin')for(const id in old)if(!(id in cur))ops.push({col,id,del:true});   /* xoá: chỉ Admin */
+    if(session.role==='admin'||col==='ppe')for(const id in old)if(!(id in cur))ops.push({col,id,del:true});   /* xoá: chỉ Admin (PPE: cả Quản lý) */
     remote[col]=cur;
   });
   const sq=canon(db.seq);if(!staff&&remoteCfg.seq!==sq){ops.push({path:'config/seq',data:JSON.parse(sq)});remoteCfg.seq=sq}

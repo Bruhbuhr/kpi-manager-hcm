@@ -803,3 +803,32 @@ html[data-theme="bujo"] .nbk-top .lm{background:var(--acc)!important;color:#fff!
 @media (prefers-reduced-motion:reduce){.npop{animation:none;transition:none}}
 @media print{#npop,#npanel{display:none!important}}
 @media (max-width:520px){.top{gap:8px}.usr{gap:4px}.usr .av{display:none}.usr .btn.sm{padding:4px 7px;min-height:30px}}
+
+/* ---------- hộp Thêm / Sửa việc dạng khung ngang rộng · ô Comment by Manager · cột Ghi chú dạng icon ---------- */
+.md.wide.kt{max-width:1080px}
+.fg.ktg{grid-template-columns:repeat(4,minmax(0,1fr))}
+.fg.ktg .f.full,.fg.ktg p.full,.fg.ktg .hint.full{grid-column:1/-1}
+@media (max-width:900px){.fg.ktg{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.fg.ktg{grid-template-columns:1fr}}
+.mcbox textarea.in{border-color:#e7b4ae;background:#fff8f7;font-weight:600;color:#a3271f}
+.mcbox .mcro{border:1px dashed #e7b4ae;background:#fff8f7;border-radius:8px;padding:8px 10px}
+.mc{font-weight:700}
+table.t th.ntc,table.t td.ntc{text-align:center;width:64px;min-width:56px;white-space:normal}
+.ntb{border:1px solid var(--line);background:var(--card,#fff);border-radius:8px;width:34px;height:30px;font-size:16px;cursor:pointer;line-height:1}
+.ntb:hover,.ntb:focus-visible{border-color:var(--acc,#2f6fde);background:var(--mute-s)}
+.ntv{white-space:pre-line;overflow-wrap:anywhere;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--mute-s);max-height:50vh;overflow:auto}
+.ntp[hidden]{display:none}
+.ntp{display:block;white-space:pre-line;overflow-wrap:anywhere;font-size:12px;text-align:left}
+@media (max-width:700px){.mcard table.t td.ntc{flex:0 0 auto}}
+
+/* ---------- Quản lý PPE ---------- */
+.pc{display:inline-block;padding:2px 7px;border-radius:7px;font-size:12.5px;white-space:nowrap;border:1px solid transparent}
+.pc small{opacity:.8}
+.pc.ok{background:var(--ok-s,#e3f5ee);color:#0b6e55}
+.pc.soon{background:#fff3d6;color:#8a5a00;border-color:#f2c86b}
+.pc.over{background:var(--bad-s,#fdecea);color:#a3271f;border-color:#eaa39c;font-weight:600}
+.pc.ret{background:var(--mute-s);color:var(--muted)}
+.pc.none{color:var(--muted)}
+table.t.ppei td{vertical-align:middle}table.t.ppei select.in,table.t.ppei input.in:not([type=checkbox]){min-width:84px;padding:4px 6px}
+table.t.ppei input[type=checkbox]{width:18px;height:18px}
+details.ppeh{margin-bottom:12px}details.ppeh summary{cursor:pointer}

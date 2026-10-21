@@ -22,11 +22,13 @@ Chế độ dùng thử (chưa bật Firebase) đăng nhập bằng `admin` / `a
 - **Quản lý duyệt** ngay trên bảng: **Duyệt** → điểm thành phần được tính vào KPI; **Re-check** → không tính điểm, dòng việc báo đỏ (nhân viên sửa lại thì việc quay về Chờ duyệt); **Chờ duyệt** → chưa tính. Có nút duyệt hàng loạt theo tháng, theo năm của một nhân viên, hoặc tất cả ở Tổng quan.
 - **Giao việc (By Manager)**: Admin / Quản lý bấm **Giao việc** ở trang nhân viên hoặc danh sách nhân viên; việc được gắn nhãn **By Manager**, có thể gắn tag **Ưu tiên**, **Quan trọng**. Trọng số, deadline nhập như Thêm việc. Nhân viên cập nhật Ngày hoàn thành, Ghi chú, trọng số; không đổi được nội dung, deadline và không xoá được.
 - **Việc làm chung**: quản lý giao 1 việc cho nhiều nhân viên (tick nhiều người trong hộp Giao việc), hoặc ai cũng thêm được người làm chung ở ô **Người làm chung** trong hộp Thêm / Sửa việc (gõ tên hoặc mã NV rồi chọn trong danh sách gợi ý). Quản lý thêm là vào việc ngay; nhân viên thêm thì người kia nhận **lời mời** ở trang KPI của mình và tự bấm **Nhận** / **Từ chối**. Mỗi người có bản việc riêng (tự chấm trọng số, quản lý duyệt riêng); **Ngày hoàn thành** do một người ghi được áp dụng cho cả nhóm. Khi quản lý đã Duyệt bản việc của bất kỳ ai trong nhóm, nhân viên không đổi được ngày hoàn thành chung nữa.
-- **Comment by Manager**: khi chọn **Re-check**, ô comment hiện ở cột cuối bảng (và trong hộp Sửa việc) để quản lý ghi cần sửa gì. Nhân viên thấy comment; khi nhân viên cập nhật lại việc, việc quay về Chờ duyệt và comment hiện mờ, gạch đi.
+- **Hộp Thêm / Sửa việc** dạng khung ngang rộng; ô **Comment by Manager** nằm dưới Ghi chú / Link bằng chứng (quản lý ghi bất cứ lúc nào, nhân viên chỉ đọc).
+- **Comment by Manager**: cột cuối bảng, chữ đậm kèm người ghi và ngày. Khi chọn **Re-check** quản lý ghi được ngay trên bảng. Việc Re-check được nhân viên cập nhật lại thì quay về Chờ duyệt và comment hiện mờ, gạch đi.
+- **Ghi chú / Link bằng chứng**: trên bảng chỉ hiện icon 📄, bấm vào để xem nội dung (bản In / PDF / Excel vẫn có đủ chữ).
 - **Chuyển việc sang tháng sau**: nút **Chuyển sang tháng…** nằm trong hộp **Sửa việc**, luôn bật với việc **chưa hoàn thành** (không cần ghi gì vào Ghi chú). Khi chuyển, chọn giữ deadline gốc (tiếp tục tính trễ) hoặc dời deadline. Tháng cũ giữ lại dòng “Đã chuyển” (không tính trọng số, điểm) và có nút **Hoàn tác**. Việc của tháng đã kết thúc mà chưa hoàn thành được liệt kê ở Dashboard → Tổng quan.
 - **Nhập Excel**: chọn một hoặc nhiều file theo mẫu `KPI_Individual_report` (sheet `Summary` + `M01…M12`); nhân viên chưa có sẽ được tạo theo Mã NV. Mặc định các việc đã có điểm trong file được coi là đã Duyệt (bỏ chọn được khi nhập). Cột Điểm thưởng của file không được đọc vì điểm thưởng luôn tính tự động.
 - **Báo cáo**: theo nhân viên (năm), theo tháng, theo quý, theo nhóm. Mọi báo cáo xuất **Excel**, **PDF**, **In**. Mỗi tháng của nhân viên in được **Phiếu đánh giá KPI** có chỗ ký. Bản In / PDF của trang nhân viên có nhận xét của quản lý và 2 ô chữ ký (Nhân viên tự đánh giá · Quản lý duyệt); PDF không cắt ngang dòng, tiêu đề cột lặp lại ở đầu mỗi trang, khổ A4 ngang.
-- **Thông báo** (chuông 🔔 trên thanh trên cùng): nhân viên nhận thông báo khi quản lý giao việc, Duyệt, Re-check, ghi Comment by Manager, nhận xét tháng, ghi đi trễ / lỗi NC, khi được mời hay được thêm vào việc làm chung; quản lý nhận thông báo khi nhân viên cập nhật lại việc Re-check. Thông báo mới nhảy ra ở góc phải trên; bật “thông báo trên máy tính” trong khung chuông thì Chrome / Windows hiện thông báo cả khi đang ở tab khác. Cần trang app đang mở (kể cả ở tab khác); đóng hẳn trình duyệt thì lần mở sau sẽ thấy “Bạn có n thông báo chưa đọc”. Firestore Rules bản v5.
+- **Thông báo** (chuông 🔔 trên thanh trên cùng): nhân viên nhận thông báo khi quản lý giao việc, Duyệt, Re-check, ghi Comment by Manager, nhận xét tháng, ghi đi trễ / lỗi NC, khi được mời hay được thêm vào việc làm chung; quản lý nhận thông báo khi nhân viên cập nhật lại việc Re-check. Thông báo mới nhảy ra ở góc phải trên; bật “thông báo trên máy tính” trong khung chuông thì Chrome / Windows hiện thông báo cả khi đang ở tab khác. Cần trang app đang mở (kể cả ở tab khác); đóng hẳn trình duyệt thì lần mở sau sẽ thấy “Bạn có n thông báo chưa đọc”. Firestore Rules bản v6.
 - **Giao diện “sổ tay”** (nút 🎨 trên thanh trên cùng, mỗi người tự chọn, lưu theo trình duyệt): **Sổ kẻ ô** (mặc định: bìa xanh than có lỗ gáy, giấy kẻ ô, đường lề đỏ ở bảng việc), **Bullet journal** (lưới chấm, xanh lá xô thơm, menu sáng), **Sổ kế hoạch** (giấy dòng kẻ ngang, thẻ chỉ mục màu nghệ, tiêu đề viết tay) và **Cổ điển** (giao diện cũ). Biểu đồ đổi màu theo giao diện.
 - **Settings** (chỉ Admin): nhóm, ngày nghỉ lễ, người dùng / phân quyền, sao lưu / khôi phục JSON, sao lưu đám mây. Mục **Quy chế KPI** ai cũng xem được.
 
@@ -35,11 +37,21 @@ KPI tháng = **Khung 1 · Quản lý giao & Tuân thủ (20)** + **Khung 2 · C�
 
 | Phần | Tối đa | Cách tính |
 |---|---|---|
-| Việc quản lý giao (Khung 1) | 10 | Mỗi việc By Manager được Duyệt = 2 điểm, chỉ cộng, không trừ khi trễ; không dùng trọng số |
+| Việc quản lý giao (Khung 1) | 10 | 10 điểm chia đều cho số việc By Manager trong tháng (10 việc → 1 điểm/việc, 5 việc → 2, 8 việc → 1,25); việc được Duyệt mới cộng, không trừ khi trễ; không dùng trọng số |
 | Tuân thủ (Khung 1) | 10 | 10 điểm, trừ 1 mỗi lần đi trễ (giờ vào sau 08:05) và 1 mỗi lỗi NC khi Audit; quản lý nhập ngày đi trễ và lỗi NC |
 | Công việc By User (Khung 2) | 80 | Tổng điểm thành phần các việc nhân viên tự thêm đã Duyệt; tổng trọng số chuẩn 80 |
 
 Các tháng trước tháng áp dụng giữ cách tính cũ (100% công việc, chuẩn trọng số 100).
+
+## Quản lý PPE
+
+Menu **🦺 Quản lý PPE** (Admin + Quản lý), theo mẫu sổ theo dõi cấp phát phương tiện bảo vệ cá nhân có chữ ký người nhận:
+
+- **Danh mục & dự án**: dự án / công trường; 6 loại PPE có sẵn (đồng phục, giày, nón, dây an toàn toàn thân, kính, chụp tai) với đơn vị, thời hạn sử dụng, size, tiêu chuẩn; sửa hoặc thêm loại khác.
+- **Sổ cấp phát**: mỗi lần giao ghi dự án, người nhận (mã NV, họ tên, tổ / nhà thầu phụ), các món, size, số lượng, lý do (cấp mới / thay định kỳ / hư hỏng / mất), đã ký nhận, ngày thu hồi. In **Biên bản giao nhận PPE** có chỗ ký. Lọc theo dự án, loại, tình trạng; xuất Excel / PDF / In.
+- **Theo dự án**: bảng người × loại PPE, màu còn hạn / sắp đến hạn thay (≤ 30 ngày) / quá hạn / chưa cấp.
+- **Đến hạn thay**: danh sách cần cấp lại, bấm **Cấp thay**.
+- Hạn thay = ngày cấp + thời hạn sử dụng của loại PPE. Dữ liệu lưu ở collection `ppe` (Firestore Rules v6).
 
 ## Công thức KPI (giữ theo file Excel)
 | Mục | Quy tắc |
@@ -91,6 +103,7 @@ Các file `js/` được nạp **theo thứ tự số**. Khi cập nhật, đổ
 | Giao việc (By Manager), gắn tag Ưu tiên / Quan trọng | ✔ | ✔ | — |
 | Thêm người làm chung | ✔ thêm ngay | ✔ thêm ngay | Gửi lời mời, người được mời tự bấm Nhận |
 | Duyệt / Re-check, Comment by Manager, nhận xét, dời deadline khi chuyển việc | ✔ | ✔ | — |
+| Quản lý PPE: dự án, cấp phát, biên bản giao nhận | ✔ | ✔ | — |
 | Thêm / sửa / xoá nhân viên, nhập Excel KPI | ✔ | — | — |
 | Settings: nhóm, ngày lễ, người dùng, sao lưu / khôi phục | ✔ | — | — |
 

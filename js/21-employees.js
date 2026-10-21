@@ -155,8 +155,8 @@ function monthTable(e,y,mm,st,opt={}){
   const w=canSheet(e.id),mg=can('manage'),kind=opt.kind||'',bm=kind==='bm',P=kpi2(),fc=F().focus||'';
   const rows=sortRows(opt.rows||st.rows).map((r,i)=>({...r,i})),scd=r=>r.sc.state!=='moved'&&(r.sc.comp!=null||r.sc.ap);
   /* Cột Comment by Manager chỉ hiện khi khung có việc Re-check (quản lý) hoặc đã có comment */
-  const showMc=rows.some(r=>r.sc.state!=='moved'&&(mcOf(r.t)||(mg&&r.sc.ap==='recheck'))),mcX=r=>{const c=mcOf(r.t);return c?c.text+(c.done?' (nhân viên đã cập nhật)':''):''};
-  const bmPts=r=>r.sc.comp==null?'–':r.sc.ap==='ok'?`<b class="cp ok">+${fmtK(P.perTask)}</b>`:r.sc.ap==='recheck'?'<b class="cp recheck">0</b><small class="tag-bad">không tính</small>':`<b class="cp pend">${fmtK(P.perTask)}</b><small>chờ duyệt</small>`;
+  const mcX=r=>{const c=mcOf(r.t);return c?c.text+(c.done?' (nhân viên đã cập nhật)':''):''};
+  const per=fmtK2(st.bmPer||0),bmPts=r=>r.sc.comp==null?'–':r.sc.ap==='ok'?`<b class="cp ok">+${per}</b>`:r.sc.ap==='recheck'?'<b class="cp recheck">0</b><small class="tag-bad">không tính</small>':`<b class="cp pend">${per}</b><small>chờ duyệt</small>`;
   const cols=[
     {h:'STT',c:'num',f:r=>r.i+1,x:r=>r.i+1},
     {h:'Nội dung công việc / Đóng góp',c:'ttl',f:r=>`${r.t.carriedFrom?`<span class="pf">Chuyển từ ${mLbl(r.t.carriedFrom.month,r.t.carriedFrom.year,y)}</span>`:''}${tagBd(r.t)}${grpBd(r.t,e.id)}<span class="tt">${esc(r.t.title)}</span>`,x:r=>r.t.title},
@@ -168,18 +168,19 @@ function monthTable(e,y,mm,st,opt={}){
     {h:'Trạng thái',c:'stc',f:r=>stBd(r.t,r.sc,y),x:r=>stText(r.t,r.sc,y)},
     bm?null:{h:'Điểm cơ bản',c:'num',f:r=>r.sc.base==null?'–':fmtK(r.sc.base),x:r=>r.sc.base??''},
     bm?null:{h:'Điểm thưởng (tự động)',c:'num',f:r=>r.sc.bonus==null?'–':r.sc.bonus?`<span class="pos">+${fmtK(r.sc.bonus)}</span>`:'0',x:r=>r.sc.bonus??''},
-    bm?{h:'Điểm giao việc',c:'num',f:bmPts,x:r=>r.sc.comp==null?'':r.sc.ap==='ok'?P.perTask:0}
+    bm?{h:'Điểm giao việc',c:'num',f:bmPts,x:r=>r.sc.comp==null?'':r.sc.ap==='ok'?r2(st.bmPer||0):0}
       :{h:'Điểm thành phần',c:'num',f:r=>r.sc.comp==null?'–':`<b class="cp ${r.sc.ap||'pend'}" title="${CP_TIP[r.sc.ap]}">${fmtK2(r.sc.comp)}</b>${r.sc.ap==='recheck'?'<small class="tag-bad">không tính</small>':r.sc.ap===''?'<small>chờ duyệt</small>':''}`,x:r=>r.sc.comp==null?'':r2(r.sc.comp)},
     {h:'Quản lý duyệt',c:'apc',f:r=>apCell(e,y,mm,r),x:r=>scd(r)?AP[r.sc.ap][1]:''},
     {h:'Tính vào KPI',xonly:1,x:r=>r.sc.comp==null?'':r.sc.counted?'Có':'Không'},
-    {h:'Ghi chú / Link bằng chứng',c:'nt',f:r=>r.t.note?linkify(r.t.note):'',x:r=>r.t.note||''},
-    showMc?{h:'Comment by Manager',c:'mcc',f:r=>mcCell(e,y,mm,r),x:mcX}:{h:'Comment by Manager',xonly:1,x:mcX},
+    /* Ghi chú / Link bằng chứng: chỉ hiện icon 📄, bấm vào xem nội dung (bản In / PDF vẫn in đủ chữ) */
+    {h:'Ghi chú / Link',c:'ntc',f:r=>r.t.note?`<button type="button" class="ntb" data-act="note-view" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" title="Xem ghi chú / link bằng chứng" aria-label="Xem ghi chú việc ${r.i+1}">📄</button><span class="ntp" hidden>${linkify(r.t.note)}</span>`:'',x:r=>r.t.note||''},
+    {h:'Comment by Manager',c:'mcc',f:r=>mcCell(e,y,mm,r),x:mcX},
     actCol(r=>!w?'':r.sc.state==='moved'?`<button class="btn sm" data-act="kt-undo" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" aria-label="Hoàn tác chuyển việc ${r.i+1}">Hoàn tác</button>`
       :canTask(e.id,r.t)?`<button class="btn sm" data-act="kt-edit" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" aria-label="Sửa việc ${r.i+1}">Sửa</button>`:'<span class="muted" title="Việc đã được quản lý Duyệt, chỉ quản lý sửa được">Đã duyệt</span>')
   ].filter(Boolean);
   const nVis=cols.filter(c=>!c.xonly).length,live=rows.filter(r=>r.sc.state!=='moved').length;
   const foot=!live?'':bm
-    ?`<tr><td colspan="2">Điểm giao việc</td><td colspan="3"></td><td class="num">${fmtK(st.pMgr)}/${P.mgrMax}</td><td colspan="${nVis-6}">${st.bmOk} việc được Duyệt × ${fmtK(P.perTask)} điểm${st.bmPend?` · ${st.bmPend} việc chờ duyệt`:''}</td></tr>`
+    ?`<tr><td colspan="2">Điểm giao việc</td><td colspan="3"></td><td class="num">${fmtK(st.pMgr)}/${P.mgrMax}</td><td colspan="${nVis-6}">${st.bmOk}/${st.bmN} việc được Duyệt × ${fmtK2(st.bmPer||0)} điểm (${P.mgrMax} ÷ ${st.bmN} việc)${st.bmPend?` · ${st.bmPend} việc chờ duyệt`:''}</td></tr>`
     :`<tr><td colspan="2">${kind==='user'?'Khung 2 · By User':'KPI tổng tháng'}</td><td class="num">${fmtK(st.weight)}</td><td colspan="5"></td><td class="num">${kind==='user'?fmtK2(st.p80):fmtK2(mVal(st))+(st.prov?'*':'')}</td><td colspan="${nVis-9}">${kind==='user'?`${rows.filter(r=>r.sc.counted).length}/${rows.filter(r=>r.sc.comp!=null).length} việc đã duyệt`:st.scored?`${st.counted}/${st.scored} việc đã duyệt`:''}</td></tr>`;
   return table(cols,rows,{meta:false,rc:r=>[r.sc.state==='moved'?'moved':r.sc.ap==='recheck'?'recheck':'',focusHit(fc,r)?'hl':''].join(' ').trim(),
     empty:bm?`Tháng ${mm} chưa có việc nào do quản lý giao.${mg?' Bấm “Giao việc” để giao việc cho nhân viên.':''}`:`Tháng ${mm} chưa có việc nào.${w?' Bấm “Thêm việc” để nhập việc của tháng.':''}`,foot});
@@ -196,7 +197,7 @@ function kpiFrames(e,y,mm,st){
       ${st.ncList.length?`<ul class="ncl">${st.ncList.map(x=>`<li><span>${fmtDate(x.d).slice(0,5)}</span> ${esc(x.note||'')}${mg?` <button type="button" class="x" data-act="nc-x" ${dA} data-id="${x.id}" aria-label="Bỏ lỗi NC ngày ${fmtDate(x.d)}">✕</button>`:''}</li>`).join('')}</ul>`:'<div class="chips"><span class="muted">Không có lỗi NC.</span></div>'}
       ${mg?`<form class="cmpf" data-submit="nc-add" ${dA}><input class="in" type="date" name="d" required min="${dmin}" max="${dmax}" aria-label="Ngày Audit"><input class="in" name="note" required maxlength="200" placeholder="Nội dung lỗi NC" aria-label="Nội dung lỗi NC"><button class="btn sm">＋ Thêm lỗi NC</button></form>`:''}</div>`;
   return `<section class="kf kf20"><div class="kfh"><h4>Khung 1 · Quản lý giao &amp; Tuân thủ</h4><span class="kfs"><b>${fmtK(st.p20)}</b> / ${P.mgrMax+P.compMax}</span></div>
-    <div class="kfsub"><div class="kfsh"><b>Việc quản lý giao</b><span class="muted">${fmtK(P.perTask)} điểm mỗi việc được Duyệt, không trừ khi trễ, tối đa ${P.mgrMax}</span><span class="kfs sm">${fmtK(st.pMgr)} / ${P.mgrMax}</span></div>${monthTable(e,y,mm,st,{rows:bmRows,kind:'bm'})}</div>
+    <div class="kfsub"><div class="kfsh"><b>Việc quản lý giao</b><span class="muted">${P.mgrMax} điểm chia đều cho ${st.bmN||'các'} việc giao${st.bmN?` = ${fmtK2(st.bmPer)} điểm/việc`:''}; cộng khi việc được Duyệt, không trừ khi trễ</span><span class="kfs sm">${fmtK(st.pMgr)} / ${P.mgrMax}</span></div>${monthTable(e,y,mm,st,{rows:bmRows,kind:'bm'})}</div>
     <div class="kfsub"><div class="kfsh"><b>Tuân thủ</b><span class="muted">${P.compMax} điểm, trừ ${fmtK(P.latePen)} mỗi lần đi trễ và ${fmtK(P.ncPen)} mỗi lỗi NC; không vi phạm thì giữ nguyên</span><span class="kfs sm">${fmtK(st.pComp)} / ${P.compMax}</span></div><div class="cmp">${lateBox}${ncBox}</div></div>
   </section>
   <section class="kf kf80"><div class="kfh"><h4>Khung 2 · Công việc By User</h4><span class="kfs"><b>${fmtK2(st.p80)}</b> / ${P.userStd}</span></div>
@@ -248,22 +249,22 @@ function taskForm(empId,y,mm,id,opt={}){
       <input class="in" list="dl-emps" id="kt-mate-in" placeholder="VD: Tuấn hoặc S21401" autocomplete="off" aria-label="Thêm người làm chung"><datalist id="dl-emps">${Object.keys(MATE_OPTS).map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist><input type="hidden" name="mates" value="">
       <small class="muted">${mg?'Quản lý thêm người là vào việc ngay.':'Người được thêm sẽ nhận lời mời và tự bấm Nhận.'} Ngày hoàn thành do một người ghi được áp dụng cho cả nhóm; trọng số và duyệt tính riêng từng người.</small></div>`;
   const empPick=assign?`<div class="f full"><span>Giao cho nhân viên <i style="color:var(--bad);font-style:normal">*</i> <small class="muted">(chọn nhiều người = việc làm chung)</small></span><input class="in" id="as-q" placeholder="Lọc theo tên hoặc mã NV" autocomplete="off" aria-label="Lọc nhân viên"><div class="empck" id="as-list">${sortedEmps().filter(x=>x.active!==false||x.id===empId).map(x=>`<label class="chk" data-k="${esc(norm(x.name+' '+x.code))}"><input type="checkbox" name="emp_${x.id}" value="${x.id}" ${x.id===empId?'checked':''}> ${esc(x.name)} <small class="muted">${esc(x.code)}${x.dept?' · '+esc(x.dept):''}</small></label>`).join('')}</div></div>`:'';
-  modal(assign?'Giao việc cho nhân viên':id?'Sửa việc':`Thêm việc tháng ${mm}/${y}`,`<form id="mf" data-submit="kt-save" data-e="${empId||''}" data-y="${y}" data-mm="${mm}" data-id="${id||''}" data-assign="${assign?1:''}"><div class="fg">
+  modal(assign?'Giao việc cho nhân viên':id?'Sửa việc':`Thêm việc tháng ${mm}/${y}`,`<form id="mf" data-submit="kt-save" data-e="${empId||''}" data-y="${y}" data-mm="${mm}" data-id="${id||''}" data-assign="${assign?1:''}"><div class="fg ktg">
     ${assign?`${empPick}${inp('ym','Tháng',`${y}-${mm}`,{type:'month',req:1,ph:'yyyy-mm'})}<p class="hint full">Việc được đánh dấu <b>By Manager</b>. Chọn nhiều người thì mỗi người có một bản việc riêng (tự chấm trọng số, duyệt riêng), Ngày hoàn thành do một người ghi áp dụng cho cả nhóm. Nhân viên không đổi được nội dung, deadline và không xoá được.</p>`:''}
     ${id&&(byMgr(t)||tg.length||g)?`<div class="f full"><div>${tagBd(t)}${grpBd(t,empId)}${byMgr(t)&&t.byName?`<small class="muted"> giao bởi ${esc(t.byName)}${t.byAt?' · '+fmtDate(t.byAt):''}</small>`:''}</div></div>`:''}
-    ${!mg&&c&&!c.done&&ap==='recheck'?`<p class="hint full mcn"><b>Comment by Manager:</b> ${esc(c.text)}<br><small>Cập nhật lại việc rồi bấm Lưu; việc sẽ quay về Chờ duyệt.</small></p>`:''}
     ${glock?'<p class="hint full">Việc làm chung này đã được quản lý Duyệt cho một người trong nhóm nên nội dung, deadline và Ngày hoàn thành không đổi được nữa.</p>':''}
     ${mg?`<div class="f full"><span>Tag ${assign?'cho việc giao':''} <small class="muted">(nhân viên sẽ thấy trên việc của mình)</small></span><div class="tgs" role="group" aria-label="Tag">${Object.entries(TAGS).map(([k,l])=>`<label class="tgck ${k}"><input type="checkbox" name="tag_${k}" ${tg.includes(k)?'checked':''}> ${l}</label>`).join('')}</div></div>`:''}
     <label class="f full"><span>Nội dung công việc / Đóng góp <i style="color:var(--bad);font-style:normal">*</i></span><textarea class="in" name="title" rows="3" ${lock?'readonly':''}>${esc(t.title)}</textarea></label>
-    ${bmV2?`<div class="f"><span>Điểm</span><div class="hint">Việc quản lý giao: ${fmtK(kpi2().perTask)} điểm khi được Duyệt (Khung 1), không dùng trọng số, không trừ khi trễ.</div><input type="hidden" name="weight" value="${esc(wOk(+t.weight)?t.weight:(t.weight||1))}"></div>`:inp('weight',`Trọng số – nhân viên tự chấm (${W_MIN}–${W_MAX})`,t.weight,{type:'number',step:legacy?'any':'1',req:1,attrs:legacy?'':`min="${W_MIN}" max="${W_MAX}" inputmode="numeric"`})}${mg?sel('approval','Quản lý duyệt',[['','Chờ duyệt'],[AP_VAL.ok,'Duyệt – tính điểm vào KPI'],[AP_VAL.recheck,'Re-check – không tính điểm']],AP_VAL[ap]):`<div class="f"><span>Quản lý duyệt</span><div>${apBd(ap)}</div></div>`}
-    ${mg?`<label class="f full" id="kt-mcw" hidden><span>Comment by Manager <small class="muted">(nhân viên sẽ thấy; chỉ nhập khi chọn Re-check)</small></span><textarea class="in" name="mc" rows="2" maxlength="500" placeholder="Cần sửa / bổ sung gì…">${esc(c&&!c.done?c.text:'')}</textarea></label>`:''}
+    ${bmV2?`<div class="f"><span>Điểm</span><div class="hint">Việc quản lý giao: ${kpi2().mgrMax} điểm chia đều cho số việc giao trong tháng (Khung 1), cộng khi được Duyệt; không dùng trọng số, không trừ khi trễ.</div><input type="hidden" name="weight" value="${esc(wOk(+t.weight)?t.weight:(t.weight||1))}"></div>`:inp('weight',`Trọng số – nhân viên tự chấm (${W_MIN}–${W_MAX})`,t.weight,{type:'number',step:legacy?'any':'1',req:1,attrs:legacy?'':`min="${W_MIN}" max="${W_MAX}" inputmode="numeric"`})}${mg?sel('approval','Quản lý duyệt',[['','Chờ duyệt'],[AP_VAL.ok,'Duyệt – tính điểm vào KPI'],[AP_VAL.recheck,'Re-check – không tính điểm']],AP_VAL[ap]):`<div class="f"><span>Quản lý duyệt</span><div>${apBd(ap)}</div></div>`}
     ${legacy?`<p class="hint full">Trọng số đang lưu là ${esc(t.weight)}, nằm ngoài thang ${W_MIN}–${W_MAX}. Có thể giữ nguyên; nếu sửa, hãy nhập số nguyên từ ${W_MIN} đến ${W_MAX}.</p>`:''}
     ${inp('deadline',dlock?'Deadline <small class="muted">🔒 đã khoá, cần dời thì nhờ quản lý</small>':`Deadline${!mg?' <small class="muted">(lưu xong sẽ khoá, không sửa được)</small>':''}`,t.deadline||'',{type:'date',attrs:dlock?'readonly aria-readonly="true"':''})}${inp('submitted',g?'Ngày hoàn thành <small class="muted">(áp dụng cho cả nhóm)</small>':'Ngày hoàn thành',t.submitted||'',{type:'date',attrs:glock?'readonly':''})}
     ${mateBlk}
     <div class="f full"><span>Điểm (tự động tính)</span><div class="hint scp" id="kt-prev" aria-live="polite">–</div></div>
-    ${txa('note','Ghi chú / Link bằng chứng',t.note||'',{full:1,rows:3})}
+    ${txa('note','Ghi chú / Link bằng chứng <small class="muted">(nhân viên nhập)</small>',t.note||'',{full:1,rows:3})}
+    ${mg?`<label class="f full mcbox"><span>Comment by Manager <small class="muted">(nhân viên sẽ thấy${c&&c.done?' · nhân viên đã cập nhật sau comment này':''})</small></span><textarea class="in" name="mc" rows="3" maxlength="500" placeholder="Nhận xét / cần sửa, bổ sung gì…">${esc(c?c.text:'')}</textarea></label>`
+      :`<div class="f full mcbox"><span>Comment by Manager</span><div class="mcro">${c?mcShow(c,y):'<span class="muted">Chưa có comment.</span>'}</div>${c&&!c.done&&ap==='recheck'?'<small class="muted">Cập nhật lại việc rồi bấm Lưu; việc quay về Chờ duyệt và comment được gạch đi.</small>':''}</div>`}
     <p class="note full" style="padding:0">${mv?`Việc chưa hoàn thành cần dời sang tháng sau: bấm <b>Chuyển sang ${nxL}</b> bên dưới${g?' (chỉ chuyển phần của người này)':''}.`:lock?'Nội dung và deadline do quản lý đặt.':'Điểm thành phần chỉ được tính vào KPI khi quản lý chọn Duyệt.'}</p></div></form>`,
-    {footer:(id&&canDelTask(empId,t)?`<button class="btn danger" data-act="kt-del" data-e="${empId}" data-y="${y}" data-mm="${mm}" data-id="${id}" style="margin-right:auto">${g?'Rời việc làm chung':'Xoá việc'}</button>`:'')+(mv?`<button type="button" class="btn acc" id="kt-mv" data-act="kt-move-edit">Chuyển sang ${nxL}</button>`:'')+cancelBtn+`<button class="btn primary" form="mf">${assign?'Giao việc':'Lưu'}</button>`,size:assign||!g?'':''});
+    {footer:(id&&canDelTask(empId,t)?`<button class="btn danger" data-act="kt-del" data-e="${empId}" data-y="${y}" data-mm="${mm}" data-id="${id}" style="margin-right:auto">${g?'Rời việc làm chung':'Xoá việc'}</button>`:'')+(mv?`<button type="button" class="btn acc" id="kt-mv" data-act="kt-move-edit">Chuyển sang ${nxL}</button>`:'')+cancelBtn+`<button class="btn primary" form="mf">${assign?'Giao việc':'Lưu'}</button>`,size:'wide kt'});
   ktPreview();
 }
 /* chọn người làm chung: chọn đúng một dòng gợi ý là thêm vào danh sách */
@@ -279,10 +280,12 @@ function ktRead(form){const d=fd(form),w=String(d.weight??'').trim().replace(','
 function ktPreview(){const form=$('form[data-submit="kt-save"]'),el=$('#kt-prev');if(!form||!el)return;const d=ktRead(form),sc=scoreTask(d),mg=can('manage');
   el.innerHTML=sc.comp==null?esc(sc.state==='overdue'?`Chưa hoàn thành · quá hạn ${sc.overdue} ngày`:'Nhập đủ Deadline và Ngày hoàn thành để tính điểm.')
     :`<span>Điểm cơ bản <b>${fmtK(sc.base)}</b></span><span>Điểm thưởng (tự động) <b>${fmtK(sc.bonus)}</b></span><span>Điểm thành phần <b>${fmtK2(sc.comp)}</b></span><small>${sc.late>0?'Trễ '+sc.late+' ngày':sc.late<0?'Sớm '+(-sc.late)+' ngày làm việc':'Đúng hạn'+(d.submitted<d.deadline&&offDay(d.deadline)?` (deadline ${fmtDM(d.deadline,d.deadline.slice(0,4))} là ${offDay(d.deadline)}, ngày nghỉ: chỉ tính sớm theo ngày làm việc nên chưa có điểm thưởng)`:'')} · (${fmtK(sc.base)} × ${fmtK(sc.w)} + ${fmtK(sc.bonus)}) / 100${mg?' · '+CP_TIP[sc.ap]:''}</small>`;
-  const mw=$('#kt-mcw');if(mw)mw.hidden=sc.ap!=='recheck';   /* ô Comment by Manager chỉ hiện khi quản lý chọn Re-check */
   const b=$('#kt-mv');if(b){b.disabled=!!d.submitted;b.title=d.submitted?'Việc đã có Ngày hoàn thành nên không chuyển tháng':'Lưu việc rồi chuyển sang tháng sau'}}
 document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('form[data-submit="kt-save"]'))ktPreview()});
 document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('form[data-submit="kt-save"]'))ktPreview()});
+/* xem Ghi chú / Link bằng chứng của một việc (cột chỉ hiện icon 📄) */
+ACT['note-view']=el=>{const {e,y,mm,id}=el.dataset,sh=sheetOf(e,y),t=sh&&by(sh.months[mm].tasks,id);if(!t)return toast('Việc này không còn tồn tại.','error');
+  modal('Ghi chú / Link bằng chứng',`<p class="muted" style="margin:0 0 6px">${esc(empName(e))} · T${mm}/${y}</p><p style="margin:0 0 12px"><b>${esc(t.title.split('\n')[0])}</b></p><div class="ntv">${t.note?linkify(t.note):'<span class="muted">Chưa có ghi chú.</span>'}</div>${mcOf(t)?`<p style="margin:14px 0 4px"><b>Comment by Manager</b></p>${mcShow(mcOf(t),y)}`:''}`,{footer:`${canTask(e,t)?`<button class="btn" data-act="kt-edit" data-e="${e}" data-y="${y}" data-mm="${mm}" data-id="${id}">Sửa việc</button>`:''}<button class="btn primary" data-act="close">Đóng</button>`})};
 ACT['kt-new']=el=>canSheet(el.dataset.e)&&taskForm(el.dataset.e,el.dataset.y,el.dataset.mm);
 ACT['kt-edit']=el=>taskForm(el.dataset.e,el.dataset.y,el.dataset.mm,el.dataset.id);
 /* Giao việc: mở từ trang nhân viên (đã biết nhân viên, tháng) hoặc từ danh sách nhân viên (chọn trong hộp thoại) */
@@ -307,15 +310,14 @@ function ktSave(form){
   if(!d.title)return fail('Nhập nội dung công việc.');
   if(!(cur&&d.weight===+cur.weight)&&!wOk(d.weight))return fail(`Trọng số là số nguyên từ ${W_MIN} đến ${W_MAX}.`);
   if(mg&&apOf(d)==='ok'&&!(d.deadline&&d.submitted))return fail('Việc chưa có Deadline và Ngày hoàn thành nên chưa có điểm để Duyệt.');
-  let tid=id,added=0,addedIds=[],gRef=null;const prevAp=cur?apOf(cur):'',prevMc=mcOf(cur)&&!mcOf(cur).done?mcOf(cur).text:'';
+  let tid=id,added=0,addedIds=[],gRef=null;const prevAp=cur?apOf(cur):'',prevMc=mcOf(cur)?mcOf(cur).text:'';
   const ok=transact(()=>{
     const fill=t=>{Object.assign(t,{title:d.title,weight:d.weight,deadline:d.deadline,submitted:d.submitted,note:d.note});delete t.bonusManual;
       if(mg){
         t.approval=d.approval;if(d.tags.length)t.tags=d.tags;else delete t.tags;
-        /* Comment by Manager chỉ có hiệu lực khi Re-check; đổi sang Duyệt / Chờ duyệt thì comment cũ được coi là đã xử lý */
-        if(apOf(t)==='recheck'){const c=mcOf(t);if(d.mc){if(!c||c.done||c.text!==d.mc)t.mgrComment=mcNew(d.mc)}else if(c&&!c.done)delete t.mgrComment}
-        else if(t.mgrComment)t.mgrComment.done=true;
-      }else{t.approval='';if(t.mgrComment)t.mgrComment.done=true}};   /* nhân viên cập nhật lại việc Re-check → về Chờ duyệt, comment của quản lý mờ và gạch đi */
+        /* Comment by Manager: quản lý ghi bất cứ lúc nào; sửa nội dung = comment mới; xoá trống = bỏ comment */
+        const c=mcOf(t);if(d.mc){if(!c||c.text!==d.mc)t.mgrComment=mcNew(d.mc)}else if(c)delete t.mgrComment;
+      }else{if(apOf(t)==='recheck'&&t.mgrComment)t.mgrComment.done=true;t.approval=''}};   /* nhân viên cập nhật lại việc Re-check → về Chờ duyệt, comment của quản lý mờ và gạch đi */
     if(assign){
       /* giao cho nhiều người: mỗi người một bản việc, cùng một nhóm làm chung */
       const g=targets.length>1?newGroup({title:d.title,deadline:d.deadline,submitted:d.submitted,members:targets,y,mm,by:'manager'}):null;
@@ -343,7 +345,7 @@ function ktSave(form){
     const nm=nameOf(e)||session?.name||'';
     if(assign)targets.forEach(x=>notifyEmp(x,{ic:'📌',title:`Việc mới được giao: ${tShort(d)}`,body:`T${mm}/${y}${d.deadline?' · deadline '+fmtDate(d.deadline):''}${d.tags.length?' · '+d.tags.map(k=>TAGS[k]).join(' '):''}${targets.length>1?` · làm chung ${targets.length} người`:''}`,e:x,y,mm}));
     else if(mg){
-      const na=apOf(d);if(na!==prevAp)apNotify(e,y,mm,d,na,na==='recheck'?d.mc:'');else if(na==='recheck'&&d.mc&&d.mc!==prevMc)notifyEmp(e,{ic:'💬',title:'Comment by Manager',body:`${tShort(d)}: ${d.mc}`,e,y,mm});
+      const na=apOf(d);if(na!==prevAp)apNotify(e,y,mm,d,na,na==='recheck'?d.mc:'');else if(d.mc&&d.mc!==prevMc)notifyEmp(e,{ic:'💬',title:'Comment by Manager',body:`${tShort(d)}: ${d.mc}`,e,y,mm});
       addedIds.forEach(x=>notifyEmp(x,{ic:'👥',title:'Bạn được thêm vào việc làm chung',body:`${tShort(d)} · T${gRef.mm}/${gRef.year}`,e:x,y:gRef.year,mm:gRef.mm}));
     }else{
       if(prevAp==='recheck')notify('mgr',{ic:'🔁',title:`${nm} đã cập nhật việc Re-check`,body:tShort(d),e,y,mm});
@@ -390,7 +392,7 @@ function setApproval(e,y,mm,ids,val){
   const ok=transact(()=>{const sh=sheetOf(e,y);if(!sh)throw new Error('Không tìm thấy bảng KPI.');
     sh.months[mm].tasks.forEach(t=>{if(!ids.includes(t.id))return;
       if(val==='ok'&&scoreTask(t).comp==null)throw new Error('Việc chưa có Deadline và Ngày hoàn thành nên chưa có điểm để Duyệt.');
-      t.approval=AP_VAL[val]||'';if(val!=='recheck'&&t.mgrComment)t.mgrComment.done=true;n++});
+      t.approval=AP_VAL[val]||'';n++});
     if(!n)throw new Error('Việc này không còn tồn tại.');
     sh.updatedAt=todayStr();relockGroups()});
   if(ok){const sh=sheetOf(e,y);ids.forEach(id=>{const t=sh&&by(sh.months[mm].tasks,id);if(t)apNotify(e,y,mm,t,val,'')})}
@@ -473,7 +475,7 @@ function slipHTML(empId,y,mm){
     <table><thead><tr><th>STT</th><th>Nội dung công việc / Đóng góp</th><th>Trọng số</th><th>Deadline</th><th>Ngày hoàn thành</th><th>Ngày trễ</th><th>Điểm cơ bản</th><th>Điểm thưởng</th><th>Điểm thành phần</th><th>Quản lý duyệt</th><th>Ghi chú</th></tr></thead><tbody>
     ${sortRows(st.rows).map((r,i)=>`<tr${r.sc.ap==='recheck'&&r.sc.state!=='moved'?' style="background:#fdecea"':''}><td style="text-align:center">${i+1}</td><td style="white-space:pre-line">${tagText(r.t)?`<i>[${esc(tagText(r.t))}]</i> `:''}${esc(r.t.title)}</td><td style="text-align:right">${fmtK(r.sc.w)}</td><td>${fmtDate(r.t.deadline)}</td><td>${r.sc.state==='moved'?'Đã chuyển '+mLbl(r.t.movedTo.month,r.t.movedTo.year,y):fmtDate(r.t.submitted)}</td><td style="text-align:right">${r.sc.late??''}</td><td style="text-align:right">${r.sc.base??''}</td><td style="text-align:right">${r.sc.bonus??''}</td><td style="text-align:right">${r.sc.comp==null?'':r.sc.counted?`<b>${fmtK2(r.sc.comp)}</b>`:`<span style="color:#888">${fmtK2(r.sc.comp)}</span>`}</td><td>${r.sc.state!=='moved'&&(r.sc.comp!=null||r.sc.ap)?AP[r.sc.ap][1]:''}</td><td style="white-space:pre-line">${esc(r.t.note||'')}${mcOf(r.t)&&!mcOf(r.t).done?`${r.t.note?'\n':''}<b>Comment by Manager:</b> ${esc(mcOf(r.t).text)}`:''}</td></tr>`).join('')}
     <tr><td colspan="2"><b>KPI TỔNG THÁNG</b> (các việc đã Duyệt)</td><td style="text-align:right"><b>${fmtK(st.weight)}</b></td><td colspan="5"></td><td style="text-align:right"><b>${fmtK2(st.kpi)}</b></td><td colspan="2"><b>${g?g[2]:''}</b>${st.pending?` · ${st.pending} việc chờ duyệt`:''}${st.recheck?` · ${st.recheck} việc Re-check`:''}</td></tr></tbody></table>
-    ${st.v2?`<table style="margin-top:8px;width:auto"><tr><td><b>Khung 1 · Quản lý giao &amp; Tuân thủ</b></td><td style="text-align:right"><b>${fmtK(st.p20)}</b> / ${kpi2().mgrMax+kpi2().compMax}</td><td>Việc quản lý giao: ${st.bmOk} việc Duyệt × ${fmtK(kpi2().perTask)} = ${fmtK(st.pMgr)} / ${kpi2().mgrMax} · Tuân thủ: ${fmtK(st.pComp)} / ${kpi2().compMax} (đi trễ ${st.lateList.length} lần${st.lateList.length?': '+st.lateList.map(x=>fmtDate(x.d).slice(0,5)).join(', '):''}; lỗi NC ${st.ncList.length})</td></tr>
+    ${st.v2?`<table style="margin-top:8px;width:auto"><tr><td><b>Khung 1 · Quản lý giao &amp; Tuân thủ</b></td><td style="text-align:right"><b>${fmtK(st.p20)}</b> / ${kpi2().mgrMax+kpi2().compMax}</td><td>Việc quản lý giao: ${st.bmOk}/${st.bmN} việc Duyệt × ${fmtK2(st.bmPer||0)} = ${fmtK(st.pMgr)} / ${kpi2().mgrMax} · Tuân thủ: ${fmtK(st.pComp)} / ${kpi2().compMax} (đi trễ ${st.lateList.length} lần${st.lateList.length?': '+st.lateList.map(x=>fmtDate(x.d).slice(0,5)).join(', '):''}; lỗi NC ${st.ncList.length})</td></tr>
       <tr><td><b>Khung 2 · Công việc By User</b></td><td style="text-align:right"><b>${fmtK2(st.p80)}</b> / ${kpi2().userStd}</td><td>Tổng điểm thành phần các việc tự lập đã Duyệt (tổng trọng số ${fmtK(st.weight)})</td></tr>
       <tr><td><b>Khung 3 · KPI tháng</b></td><td style="text-align:right"><b>${fmtK2(st.kpi)}</b></td><td>Khung 1 + Khung 2, khống chế 0 – ${KPI_CAP}</td></tr></table>`:''}
     <div class="keep"><p style="margin-top:10px;white-space:pre-line"><b>Nhận xét của quản lý:</b> ${esc((sh&&sh.months[mm].comment)||'')}</p>
