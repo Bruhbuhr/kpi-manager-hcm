@@ -832,3 +832,16 @@ table.t th.ntc,table.t td.ntc{text-align:center;width:64px;min-width:56px;white-
 table.t.ppei td{vertical-align:middle}table.t.ppei select.in,table.t.ppei input.in:not([type=checkbox]){min-width:84px;padding:4px 6px}
 table.t.ppei input[type=checkbox]{width:18px;height:18px}
 details.ppeh{margin-bottom:12px}details.ppeh summary{cursor:pointer}
+
+/* ---------- file bằng chứng (Google Drive) ---------- */
+.evbox{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;background:var(--mute-s)}
+.evl{display:flex;flex-wrap:wrap;gap:6px}
+.chip.ev{display:inline-flex;align-items:center;gap:4px;max-width:100%;background:var(--card,#fff);border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:13px}
+.chip.ev a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px;text-decoration:none}
+.chip.ev a:hover{text-decoration:underline}
+.chip.ev small{color:var(--muted)}
+.chip.ev .x{width:22px;height:22px;font-size:13px}
+.chip.ev.wait{color:var(--muted);font-style:italic}
+.evup{cursor:pointer}
+.ntb{position:relative}
+.ntb .ntn{position:absolute;top:-6px;right:-6px;background:var(--acc,#2f6fde);color:#fff;font-style:normal;font-size:10.5px;min-width:16px;height:16px;line-height:16px;border-radius:8px;padding:0 3px}

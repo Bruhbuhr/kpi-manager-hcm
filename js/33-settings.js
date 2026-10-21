@@ -13,6 +13,7 @@ PAGES['set/org']={t:'Nhóm & ngày lễ',
     <div class="grid g2">
     ${card('Nhóm',`<form data-submit="depts"><label class="f"><span>Mỗi dòng một nhóm</span><textarea class="in" name="depts" rows="9" ${adm?'':'readonly'}>${esc((db.company.depts||[]).join('\n'))}</textarea></label><p class="note">Nhóm dùng để lọc Dashboard, báo cáo và gán cho nhân viên. Nhóm đang có nhân viên vẫn hiện ở bộ lọc kể cả khi bị xoá khỏi danh sách này.</p><div class="bar" style="margin:0"><button class="btn primary" ${adm?'':'disabled'}>Lưu nhóm</button></div></form>`)}
     ${card('Ngày nghỉ lễ',`<form data-submit="holidays"><div class="bar"><label class="fl">Năm ${fSel('hy','Năm',ys.map(v=>[v,v]))}</label><span class="muted">${hs.length} ngày</span></div><label class="f"><span>Mỗi dòng một ngày, dạng dd/mm/yyyy</span><textarea class="in" name="days" rows="9" ${adm?'':'readonly'}>${esc(hs.map(fmtDate).join('\n'))}</textarea></label><p class="note">Ngày lễ không được tính là ngày làm việc khi cộng điểm <b>hoàn thành sớm</b> (cùng với Chủ nhật; Thứ 7 là ngày làm việc). Hoàn thành trễ luôn tính đủ ngày lịch. Danh sách ban đầu lấy từ sheet Holiday_VN của file KPI.</p><div class="bar" style="margin:0"><button class="btn primary" ${adm?'':'disabled'}>Lưu ngày lễ năm ${esc(f.hy)}</button></div></form>`)}
+    ${typeof evSettingsCard==='function'?evSettingsCard():''}
     </div>`;
   }};
 SUB.kpi2=form=>{if(!can('admin'))return toast('Chỉ Admin được sửa.','error');const d=fd(form),n=k=>Number(d[k]);
