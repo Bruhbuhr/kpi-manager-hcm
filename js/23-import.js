@@ -31,6 +31,30 @@ function parseKpiWorkbook(wb){
   if(!found)throw new Error('không có sheet tháng nào (M01…M12).');
   return{code:String(code).trim(),name:String(name).trim(),year,months,total};
 }
+
+/* =====================================================================
+   DANH MỤC CHỈ TIÊU KPI (Khung 2) – file Excel KPI cá nhân có các sheet "Individual KPIs – <tên>"
+   Đọc mục I (từ dòng có cột A = I đến trước dòng II) của từng sheet, ghép nhân viên theo Mã NV (ô F4).
+   Chỉ Admin / Quản lý. Không đổi điểm của việc. Nhập lại thì danh mục theo đúng file (xem kpiMerge).
+   ===================================================================== */
+function parseKpiCatalog(wb){
+  const cv=(ws,a)=>ws&&ws[a]&&ws[a].v!=null?ws[a].v:null,s=v=>String(v??'').replace(/\r/g,'').trim();
+  return wb.SheetNames.filter(n=>/^individual kpis/i.test(n.trim())).map(n=>{
+    const ws=wb.Sheets[n];let r0=0;
+    for(let r=1;r<=60&&!r0;r++)if(s(cv(ws,'A'+r))==='I')r0=r;   /* ponytail: mẫu hiện tại có mục I ở dòng 10; quét 60 dòng đầu, mẫu đổi thì nâng số này */
+    const x={sheet:n.trim(),code:s(cv(ws,'F4')),name:s(cv(ws,'C3')),year:+((/nam\s*(\d{4})/.exec(norm(cv(ws,'A1')))||[])[1]||0)||null,
+      sec:r0?s(cv(ws,'C'+r0)):'',secW:r0?r2((+cv(ws,'B'+r0)||0)*100):0,rows:[]};
+    for(let r=r0+1;r0&&r<=r0+80;r++){
+      const a=s(cv(ws,'A'+r));if(/^[IVX]+$/.test(a))break;   /* gặp mục II là hết mục I */
+      const text=s(cv(ws,'C'+r)),g=cv(ws,'G'+r),w=typeof g==='number'?r2(g*100):null,last=x.rows[x.rows.length-1];
+      if(!text&&w==null&&!a)continue;
+      if(!a&&w==null&&last&&last.no&&!last.text&&last.w==null){last.text=text;continue}   /* sheet Chau: dòng số nhóm để trống, tên nhóm ở dòng dưới */
+      x.rows.push({no:/^\d+$/.test(a)?a:'',text,w,rule:s(cv(ws,'H'+r))});
+    }
+    const taken=new Set();x.rows.forEach(k=>{k.id=kpiId(k.text||k.no,taken);taken.add(k.id)});
+    return x;
+  });
+}
 /* Quyền nhập: Admin – mọi file, tạo được nhân viên mới · Quản lý – nhân viên đã có trong danh sách · Nhân viên – chỉ file của chính mình (Mã NV trùng),
    mọi việc vào trạng thái Chờ duyệt, không ghi đè năm đã có việc được quản lý Duyệt. Trả về '' khi được nhập, ngược lại là lý do. */
 const impMode=()=>can('admin')?'admin':can('manage')?'mgr':isStaff()&&session.empId?'staff':'';
