@@ -162,3 +162,10 @@ test('Bảng sửa danh mục: lưu không đổi gì thì không ghi; chèn dò
   assert.deepEqual(bad.f.w.cls,['bad']);assert.match(toasts.pop(),/phải từ 0 đến 100/);
   assert.equal(ids().length,3);   /* không lưu khi có lỗi */
 });
+
+test('Bảng sửa danh mục: trọng số lạ (ghi thẳng vào Firestore) không chèn được HTML; số thì giữ nguyên',()=>{
+  const h=run(`kcRowHTML({id:'x',no:'1',text:'a',w:'40" autofocus onfocus="alert(1)',rule:''})`);
+  assert.ok(!/onfocus="alert/.test(h)&&!/autofocus/.test(h));
+  assert.match(run(`kcRowHTML({id:'x',no:'1',text:'a',w:40})`),/name="w" type="number"[^>]*value="40"/);
+  assert.match(run(`kcRowHTML({id:'x',no:'1',text:'a',w:null})`),/name="w" type="number"[^>]*value=""/);
+});
