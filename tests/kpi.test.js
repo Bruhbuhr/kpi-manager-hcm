@@ -89,7 +89,7 @@ test('Nhập danh mục chỉ tiêu: ghi theo file, giữ id cũ khi trùng nộ
 });
 
 test('kpiSel: dòng trống đầu được chọn khi chưa gắn / chỉ tiêu lạ; nhóm tiêu đề là optgroup; chữ từ Excel được escape',()=>{
-  Object.assign(ctx,{PAGES:{},document:{addEventListener(){},querySelector:()=>null}});
+  ctx.L={};Object.assign(ctx,{PAGES:{},document:{addEventListener:(t,f)=>(ctx.L[t]=ctx.L[t]||[]).push(f),querySelector:()=>null}});   /* giữ các listener của 21-employees để test 12 gọi */
   vm.runInContext(fs.readFileSync(path.join(__dirname,'..','js','21-employees.js'),'utf8'),ctx,{filename:'21-employees.js'});
   ctx.K2={rows:[{id:'a',no:'1',text:'Solo',w:10},{id:'b',no:'3',text:'<img src=x onerror=alert(1)>',w:null},{id:'c',no:'',text:'Con "1" a',w:40}]};
   const h=run("kpiSel(K2,'zzz','required')");
@@ -118,4 +118,47 @@ test('monthTable Khung 2: có danh mục → dòng I / nhóm / chỉ tiêu / Ch�
   assert.match(g,/<select class="in" name="kpi" data-kpi data-e="e5" data-y="2026" data-mm="10" data-id="x2"/);   /* việc chưa gắn có ô chọn */
   assert.ok(!g.includes('data-id="x1" aria-label="Chỉ tiêu KPI'));   /* việc đã gắn thì không */
   assert.ok(g.indexOf('Lau phòng họp')>g.indexOf('Các phòng họp')&&g.indexOf('Việc chưa gắn')>g.indexOf('Chưa phân loại'));
+});
+
+test('ktSave: chỉ tiêu KPI bắt buộc với việc mới / khi nhân viên lưu; quản lý để trống thì giữ id đang gắn',()=>{
+  Object.assign(ctx,{FormData:function(f){return Object.entries(f._data)},notify(){},notifyEmp(){}});   /* fd(form) đọc form giả */
+  run(`db=defaultDB();db.employees.push({id:'e6',code:'S6',name:'E',active:true});{const s=sheetOf('e6',2026,true);s.kpi={sec:'I',rows:[{id:'a',no:'1',text:'Solo',w:10}]};
+    s.months['10'].tasks.push({id:'old',title:'Việc cũ',weight:3,deadline:'2026-10-05',submitted:'2026-10-05',approval:'',note:'',kpi:'k_mo_coi'})}`);
+  ctx.F1={dataset:{e:'e6',y:'2026',mm:'10',id:'',assign:''},_data:{title:'Việc mới',weight:'5',deadline:'2026-10-20',submitted:'',approval:'',note:''}};
+  run("session={role:'staff',empId:'e6',name:'E'}");
+  assert.equal(run('ktSave(F1)'),null);   /* nhân viên, việc mới, chưa chọn chỉ tiêu → không lưu */
+  ctx.F1._data.kpi='a';const r=run('ktSave(F1)');assert.ok(r&&r.id);
+  assert.equal(run(`by(sheetOf('e6',2026).months['10'].tasks,'${r.id}').kpi`),'a');
+  run("session={role:'admin',name:'A'}");
+  ctx.F2={dataset:{e:'e6',y:'2026',mm:'10',id:'old',assign:''},_data:{title:'Việc cũ',weight:'3',deadline:'2026-10-05',submitted:'2026-10-05',approval:'',note:'quản lý ghi',kpi:''}};
+  assert.ok(run('ktSave(F2)'));   /* quản lý sửa việc cũ: không bắt buộc chọn */
+  assert.equal(run("by(sheetOf('e6',2026).months['10'].tasks,'old').note"),'quản lý ghi');
+  assert.equal(run("by(sheetOf('e6',2026).months['10'].tasks,'old').kpi"),'k_mo_coi');   /* id cũ (lạ) không bị xoá, nhập lại danh mục vẫn gắn lại được */
+});
+
+test('Gắn chỉ tiêu ngay trên bảng: được cả với việc đã Duyệt chưa gắn, không đổi điểm / duyệt; nhân viên không đổi việc đã Duyệt đã gắn',()=>{
+  const fire=(id,val)=>{const el={value:val,dataset:{e:'e6',y:'2026',mm:'10',id}};(ctx.L.change||[]).forEach(f=>f({target:{closest:s=>s==='select[data-kpi]'?el:null}}))};
+  run(`session={role:'staff',empId:'e6',name:'E'};sheetOf('e6',2026).months['10'].tasks.push({id:'ap',title:'Đã duyệt',weight:4,deadline:'2026-10-06',submitted:'2026-10-06',approval:'Duyệt',note:''})`);
+  const p0=run("monthStats(sheetOf('e6',2026).months['10'],'2026-10').p80");
+  fire('ap','a');
+  assert.equal(run("by(sheetOf('e6',2026).months['10'].tasks,'ap').kpi"),'a');
+  assert.equal(run("by(sheetOf('e6',2026).months['10'].tasks,'ap').approval"),'Duyệt');
+  assert.equal(run("monthStats(sheetOf('e6',2026).months['10'],'2026-10').p80"),p0);
+  run("sheetOf('e6',2026).kpi.rows.push({id:'b',no:'2',text:'Khác',w:5})");fire('ap','b');
+  assert.equal(run("by(sheetOf('e6',2026).months['10'].tasks,'ap').kpi"),'a');   /* đã Duyệt + đã có chỉ tiêu: nhân viên không đổi được */
+});
+
+test('Bảng sửa danh mục: lưu không đổi gì thì không ghi; chèn dòng giữ id các dòng khác; trọng số sai báo ngay tại ô',()=>{
+  const toasts=[];ctx.toast=m=>toasts.push(m);ctx.document.body={classList:{add(){},remove(){}}};
+  const mk=(id,no,text,w,rule='')=>{const f={};for(const [k,v] of Object.entries({no,text,w,rule})){const o={value:v,cls:[]};o.classList={add:c=>o.cls.push(c),remove(){}};o.setAttribute=()=>{};o.focus=()=>{};f[k]=o}return{dataset:{id},f,querySelector:s=>f[/name=(\w+)/.exec(s)[1]]}};
+  const save=trs=>{ctx.FM={dataset:{e:'e6',y:'2026'},_data:{sec:'I'},querySelectorAll:()=>trs};run("session={role:'member',name:'Q'};globalThis.SUB['kc-save'](FM)")};   /* SUB nơi 21-employees đã đăng ký (test 10 nạp 10-ui-core có const SUB riêng) */
+  const ids=()=>run("sheetOf('e6',2026).kpi.rows.map(r=>r.id)");
+  save([mk('a','1','Solo','10'),mk('b','2','Khác','5')]);
+  assert.equal(toasts.pop(),'Không có thay đổi.');
+  save([mk('a','1','Solo','10'),mk('','','Mới\nhai dòng',''),mk('b','2','Khác','5')]);
+  assert.deepEqual(ids(),['a',run("kpiId('Mới hai dòng')"),'b']);
+  assert.equal(run("sheetOf('e6',2026).kpi.rows[1].text"),'Mới\nhai dòng');   /* giữ xuống dòng */
+  const bad=mk('a','1','Solo','150');save([bad]);
+  assert.deepEqual(bad.f.w.cls,['bad']);assert.match(toasts.pop(),/phải từ 0 đến 100/);
+  assert.equal(ids().length,3);   /* không lưu khi có lỗi */
 });
