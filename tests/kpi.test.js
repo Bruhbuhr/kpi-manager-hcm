@@ -70,3 +70,11 @@ test('parseKpiCatalog: đọc mục I các sheet Individual KPIs (Tuyen, Chau, A
   assert.equal(a.code,'');   /* sheet không có Mã NV → màn hình nhập báo "Sheet không có Mã NV (ô F4)" */
   assert.equal(a.rows.filter(r=>r.w!=null).reduce((s,r)=>s+r.w,0),85);   /* sheet An cộng ra 85 (Excel tự trừ G16): nhập nguyên, màn hình báo khác chuẩn 80 */
 });
+
+test('Nhập Excel việc tháng (ghi đè bảng KPI) vẫn giữ danh mục chỉ tiêu KPI',()=>{
+  Object.assign(ctx,{document:{querySelector:()=>null},toast(){},closeModal(){},rerender(){},render(){},ui:{f:{}},location:{hash:''}});   /* phần giao diện mà SUB['imp-save'] gọi tới */
+  run(`db=defaultDB();session={role:'admin'};db.employees.push({id:'e9',code:'S9',name:'B',active:true});sheetOf('e9',2026,true).kpi={sec:'I',rows:[{id:'k1',no:'1',text:'A',w:10}]};
+    IMP={items:[{file:'f.xlsx',d:{code:'S9',name:'B',year:2026,months:emptyMonths(),total:0}}]};SUB['imp-save']()`);
+  assert.equal(run("sheetOf('e9',2026).source"),'Excel');   /* bảng đã được ghi lại từ file */
+  assert.deepEqual(run("(sheetOf('e9',2026).kpi||{rows:[]}).rows.map(r=>r.id)"),['k1']);
+});

@@ -95,8 +95,9 @@ async function impRead(files){
   const box=$('#imp-list');if(box)box.innerHTML='<p class="note" role="status">Đang đọc file…</p>';
   const items=[];
   for(const f of [...files]){
-    try{const d=parseKpiWorkbook(XLSX.read(await f.arrayBuffer(),{type:'array'}));items.push({file:f.name,d})}
-    catch(e){items.push({file:f.name,err:/^không/.test(e.message)?e.message:'không đọc được file. Hãy chọn file .xlsx theo mẫu KPI cá nhân.'})}
+    let wb=null;
+    try{wb=XLSX.read(await f.arrayBuffer(),{type:'array'});const d=parseKpiWorkbook(wb);items.push({file:f.name,d})}
+    catch(e){items.push({file:f.name,err:wb&&wb.SheetNames.some(n=>/^individual kpis/i.test(n.trim()))?'không theo mẫu việc tháng: đây là file danh mục chỉ tiêu KPI (sheet Individual KPIs…). Dùng nút “Nhập danh mục chỉ tiêu KPI” ở trang Tất cả nhân viên.':/^không/.test(e.message)?e.message:'không đọc được file. Hãy chọn file .xlsx theo mẫu KPI cá nhân.'})}
   }
   if(!IMP)return;IMP.items=items;impRender();
 }
@@ -108,6 +109,7 @@ function impRender(){
     const odd=MM.reduce((a,mm)=>a+ms[mm].tasks.filter(t=>!(Number.isInteger(+t.weight)&&+t.weight>=W_MIN&&+t.weight<=W_MAX)).length,0);
     return `<tr><td>${esc(x.file)}</td><td><b>${esc(x.d.name)}</b><small>${esc(x.d.code)}${e?'':' · nhân viên mới'}</small></td><td class="num">${x.d.year}</td><td class="num">${x.d.total}<small>${ys.counted} đã duyệt · ${ys.pending} chờ duyệt${ys.recheck?' · '+ys.recheck+' Re-check':''}</small></td><td class="num">${fmtK(ys.avg)}<small>${ys.ev.length} tháng có điểm</small></td><td>${has?badge('warn','Ghi đè bảng KPI '+x.d.year):badge('ok','Thêm mới')}${odd?`<small class="tag-warn">${odd} việc có trọng số ngoài thang ${W_MIN}–${W_MAX}</small>`:''}</td></tr>`})):'' ;
   if(good.some(x=>{const e=empByCode(x.d.code);return e&&sheetOf(e.id,x.d.year)}))box.innerHTML+='<p class="note tag-warn">Bảng KPI bị ghi đè sẽ mất các thay đổi đã làm trên app cho năm đó (việc đã chuyển tháng, nhận xét, việc thêm tay).</p>';
+  if(good.some(x=>{const e=empByCode(x.d.code),s=e&&sheetOf(e.id,x.d.year);return s&&s.kpi}))box.innerHTML+='<p class="note">Danh mục chỉ tiêu KPI (Khung 2) được giữ nguyên; các việc nhập từ file sẽ ở “Chưa phân loại” để chọn lại chỉ tiêu.</p>';
   if(ok){ok.disabled=!good.length;ok.textContent=good.length?`Nhập ${good.length} file`:'Nhập'}
 }
 SUB['imp-save']=()=>{
@@ -115,8 +117,8 @@ SUB['imp-save']=()=>{
   const ok=transact(()=>{good.forEach(({d})=>{
     const why=impBlock(d);if(why)throw new Error(why);
     let e=empByCode(d.code);if(!e){e={id:uid('e'),code:d.code,name:d.name,dept:'',title:'',email:'',note:'',active:true,createdAt:Date.now()};db.employees.push(e)}
-    db.sheets=db.sheets.filter(s=>s.id!==sheetId(e.id,d.year));
-    db.sheets.push({id:sheetId(e.id,d.year),empId:e.id,year:d.year,months:impMonths(d),updatedAt:todayStr(),source:'Excel'});lastId=e.id;lastY=d.year})});
+    const old=sheetOf(e.id,d.year);db.sheets=db.sheets.filter(s=>s.id!==sheetId(e.id,d.year));
+    db.sheets.push({id:sheetId(e.id,d.year),empId:e.id,year:d.year,months:impMonths(d),updatedAt:todayStr(),source:'Excel',...(old&&old.kpi?{kpi:old.kpi}:{})});lastId=e.id;lastY=d.year})});   /* giữ danh mục chỉ tiêu KPI (Khung 2) khi ghi đè bảng */
   if(!ok)return;
   const n=good.length;closeModal();toast(`Đã nhập ${n} bảng KPI`);
   if(n===1){(ui.f['emp/'+lastId]??={}).year=String(lastY);delete ui.f['emp/'+lastId].mm;if(location.hash==='#/emp/'+lastId)render(false);else location.hash='#/emp/'+lastId}else rerender();
