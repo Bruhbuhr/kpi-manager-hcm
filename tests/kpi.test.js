@@ -169,3 +169,11 @@ test('Bảng sửa danh mục: trọng số lạ (ghi thẳng vào Firestore) kh
   assert.match(run(`kcRowHTML({id:'x',no:'1',text:'a',w:40})`),/name="w" type="number"[^>]*value="40"/);
   assert.match(run(`kcRowHTML({id:'x',no:'1',text:'a',w:null})`),/name="w" type="number"[^>]*value=""/);
 });
+
+test('kpiMerge: hai chỉ tiêu trùng nội dung giữ đúng id khi nhập lại cùng file nhiều lần',()=>{
+  ctx.DUP=run(`(()=>{const t=new Set(),r=[{no:'1',text:'Nhóm một',w:null},{no:'',text:'Khác',w:30},{no:'2',text:'Nhóm hai',w:null},{no:'',text:'Khác',w:50}];r.forEach(k=>{k.id=kpiId(k.text,t);t.add(k.id)});return r})()`);
+  const m1=run('kpiMerge(null,DUP)'),m2=run('kpiMerge({rows:DUP},DUP)');ctx.M2=m2;const m3=run('kpiMerge({rows:M2.rows},DUP)');
+  assert.deepEqual(m2.rows.map(r=>[r.w,r.id]),m1.rows.map(r=>[r.w,r.id]));   /* 30 giữ id của 30, 50 giữ id của 50 */
+  assert.deepEqual(m3.rows.map(r=>r.id),m1.rows.map(r=>r.id));
+  assert.equal(m2.dropped.length,0);
+});

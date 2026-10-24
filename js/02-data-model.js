@@ -189,8 +189,10 @@ function kpiUse(empId,y,hit){const sh=sheetOf(empId,y),m={};let n=0;
   return{n,by:Object.entries(m).map(([k,c])=>`T${k}: ${c}`).join(', ')}}
 /* Nhập lại danh mục: file là chuẩn. Dòng trùng nội dung với dòng đang có giữ id cũ để việc vẫn gắn đúng;
    dòng đang có mà file không còn thì bị bỏ (dropped) – các việc gắn với nó về "Chưa phân loại". */
-function kpiMerge(old,rows){const o=(old&&old.rows)||[],byKey=new Map(o.map(r=>[kpiKey(r.text),r.id])),taken=new Set();
-  const out=rows.map(r=>{let id=byKey.get(kpiKey(r.text))||r.id;if(taken.has(id))id=kpiId(r.text,taken);taken.add(id);return{...r,id}}),keep=new Set(out.map(r=>r.id));
+function kpiMerge(old,rows){const o=(old&&old.rows)||[],q=new Map(),taken=new Set();
+  o.forEach(r=>{const k=kpiKey(r.text);(q.get(k)||q.set(k,[]).get(k)).push(r.id)});   /* nhiều dòng cùng nội dung: giữ id cũ theo thứ tự */
+  const hit=rows.map(r=>{const a=q.get(kpiKey(r.text)),id=a&&a.shift();if(id)taken.add(id);return id});   /* lượt 1: dòng trùng nội dung nhận id cũ */
+  const out=rows.map((r,i)=>{let id=hit[i];if(!id){id=taken.has(r.id)?kpiId(r.text,taken):r.id;taken.add(id)}return{...r,id}}),keep=new Set(out.map(r=>r.id));   /* lượt 2: dòng còn lại dùng id theo nội dung của file */
   return{rows:out,dropped:o.filter(r=>r.w!=null&&!keep.has(r.id))}}
 /* Khung 2 theo danh mục: các dòng hiển thị theo đúng thứ tự file Excel.
    lv: 'sec' (mục I) · 'cat' (nhóm có số) · 'hdr' (tiêu đề trong nhóm) · 'line' (chỉ tiêu có trọng số) · 'none' (Chưa phân loại) · 'task' (việc).
