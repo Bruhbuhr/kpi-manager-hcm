@@ -7,7 +7,7 @@ ACT.setf=el=>{const k=el.dataset.k,v=el.dataset.v;if(F()[k]===v)return;F()[k]=v;
 
 /* ---------- danh sách nhân viên ---------- */
 PAGES['emp/list']={t:'Tất cả nhân viên',
-  head(){return `<div class="bar">${fSearch('Tìm tên, mã NV, chức danh…')}${scopeBar(fSel('st','Trạng thái',[['','Đang theo dõi'],['all','Tất cả'],['off','Ngừng theo dõi']]))}<div class="sp"></div><button class="btn" data-act="export" data-name="nhan-vien-kpi">⬇ Excel</button>${can('manage')?'<button class="btn" data-act="kt-assign">📌 Giao việc</button>':''}${addBtns()}</div>`},
+  head(){return `<div class="bar">${fSearch('Tìm tên, mã NV, chức danh…')}${scopeBar(fSel('st','Trạng thái',[['','Đang theo dõi'],['all','Tất cả'],['off','Ngừng theo dõi']]))}<div class="sp"></div><button class="btn" data-act="export" data-name="nhan-vien-kpi">⬇ Excel</button>${can('manage')?'<button class="btn" data-act="kt-assign">📌 Giao việc</button>':''}${can('manage')?`<button class="btn" data-act="kc-imp" data-y="${esc(F().year||curYear())}">${KPI_ICO}Nhập danh mục chỉ tiêu KPI</button>`:''}${addBtns()}</div>`},
   tbl(){
     const f=F(),y=f.year||curYear(),q=norm(f.q),st=f.st||'';
     const rows=sortedEmps().filter(e=>(!f.dept||e.dept===f.dept)&&(st==='all'||(st==='off'?e.active===false:e.active!==false))&&(!q||norm(`${e.code} ${e.name} ${e.title||''} ${e.email||''} ${e.dept||''}`).includes(q))).map(e=>({e,ys:empStats(e,y)}));
@@ -135,6 +135,18 @@ const tagText=t=>{const g=grpOfT(t);return [byMgr(t)?'By Manager':'',...tagsOf(t
 function grpBd(t,eid){const g=grpOfT(t);if(!g)return'';const o=g.members.filter(x=>x!==eid).map(x=>gName(g,x)),inv=(g.invited||[]).map(x=>gName(g,x)),dec=(g.declined||[]).filter(x=>!g.members.includes(x)).map(x=>gName(g,x));
   if(!o.length&&!inv.length&&!dec.length)return'';
   return `<span class="pf grp" title="Việc làm chung: Ngày hoàn thành áp dụng cho cả nhóm${g.locked?' · đã được quản lý duyệt':''}">👥 ${o.length?'Làm chung: '+esc(o.join(', ')):'Làm chung'}${inv.length?` · chờ nhận: ${esc(inv.join(', '))}`:''}${dec.length?` · từ chối: ${esc(dec.join(', '))}`:''}</span>`}
+/* biểu tượng danh mục chỉ tiêu: 3 vạch, vạch cuối thụt vào như chỉ tiêu con (SVG nét theo màu chữ; phần giao diện mới không dùng emoji) */
+const KPI_ICO='<svg class="kico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M2.5 3.5h.5M6 3.5h7.5M2.5 8h.5M6 8h7.5M5 12.5h.5M8.5 12.5h5"/></svg>';
+/* Chỉ tiêu KPI (Khung 2): tiêu đề dòng nhóm / chỉ tiêu = nhãn gọn + phần còn lại của ô Excel; rê chuột xem Quy ước đánh giá */
+const kpiTtl=(text,pre='',rule='')=>{const s=String(text||''),rest=s.split('\n').slice(1).join('\n').trim();return `<span class="tt"${rule?` title="${esc('Quy ước đánh giá (file Excel): '+rule)}"`:''}>${pre}${esc(kpiLabel(s))}</span>${rest?`<small class="kpx">${esc(rest)}</small>`:''}`};
+/* ô chọn chỉ tiêu KPI: nhóm có tiêu đề → optgroup, nhóm một dòng → option; luôn có dòng trống đầu để không tự chọn thay người dùng */
+function kpiSel(k,cur,attrs=''){let h='',open=false;const opt=(r,lb)=>`<option value="${esc(r.id)}" ${r.id===cur?'selected':''}>${esc(lb)}</option>`,close=()=>{if(open){h+='</optgroup>';open=false}};
+  for(const r of (k&&k.rows)||[]){
+    if(r.no&&r.w==null){close();h+=`<optgroup label="${esc(r.no+'. '+kpiLabel(r.text))}">`;open=true}
+    else if(r.no){close();h+=opt(r,r.no+'. '+kpiLabel(r.text))}
+    else if(r.w!=null)h+=opt(r,kpiLabel(r.text));
+  }
+  close();return `<select class="in" name="kpi" ${attrs}><option value="" ${kpiHas(k,cur)?'':'selected'}>— Chọn chỉ tiêu KPI —</option>${h}</select>`}
 /* Ô Quản lý duyệt: quản lý chọn ngay trên bảng; nhân viên chỉ thấy kết quả */
 function apCell(e,y,mm,r){
   const sc=r.sc;if(sc.state==='moved')return '';

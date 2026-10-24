@@ -78,3 +78,24 @@ test('Nhập Excel việc tháng (ghi đè bảng KPI) vẫn giữ danh mục ch
   assert.equal(run("sheetOf('e9',2026).source"),'Excel');   /* bảng đã được ghi lại từ file */
   assert.deepEqual(run("(sheetOf('e9',2026).kpi||{rows:[]}).rows.map(r=>r.id)"),['k1']);
 });
+
+test('Nhập danh mục chỉ tiêu: ghi theo file, giữ id cũ khi trùng nội dung, bỏ dòng file không còn, bỏ qua người không khớp Mã NV',()=>{
+  Object.assign(ctx,{done(){},closeModal(){},toast(){},rerender(){}});
+  run(`db=defaultDB();session={role:'member'};db.employees.push({id:'e7',code:'S7',name:'C',active:true});sheetOf('e7',2026,true).kpi={sec:'I',rows:[{id:'k_cu',no:'1',text:'Corporate compliance',w:10},{id:'k_bo',no:'',text:'Chỉ tiêu cũ',w:5}]};
+    IMP={kc:1,items:[{sheet:'S',code:'S7',name:'C',year:2026,sec:'KPI',rows:[{id:'k_new1',no:'1',text:'corporate  compliance',w:10},{id:'k_new2',no:'',text:'Mới',w:70}],e:empOf('e7')},{sheet:'X',code:'S0',name:'Z',year:2026,sec:'',rows:[],e:null}]};SUB['kc-imp-save']()`);
+  assert.deepEqual(run("sheetOf('e7',2026).kpi.rows.map(r=>r.id)"),['k_cu','k_new2']);
+  assert.equal(run("sheetOf('e7',2026).kpi.sec"),'KPI');
+  assert.equal(run("db.sheets.length"),1);   /* người không khớp Mã NV không tạo bảng */
+});
+
+test('kpiSel: dòng trống đầu được chọn khi chưa gắn / chỉ tiêu lạ; nhóm tiêu đề là optgroup; chữ từ Excel được escape',()=>{
+  Object.assign(ctx,{PAGES:{},document:{addEventListener(){},querySelector:()=>null}});
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'..','js','21-employees.js'),'utf8'),ctx,{filename:'21-employees.js'});
+  ctx.K2={rows:[{id:'a',no:'1',text:'Solo',w:10},{id:'b',no:'3',text:'<img src=x onerror=alert(1)>',w:null},{id:'c',no:'',text:'Con "1" a',w:40}]};
+  const h=run("kpiSel(K2,'zzz','required')");
+  assert.match(h,/^<select class="in" name="kpi" required><option value="" selected>— Chọn chỉ tiêu KPI —<\/option>/);
+  assert.match(h,/<option value="a" >1\. Solo<\/option>/);
+  assert.match(h,/<optgroup label="3\. &lt;img src=x onerror=alert\(1\)&gt;"><option value="c" >Con &quot;1&quot; a<\/option><\/optgroup>/);
+  assert.ok(!h.includes('<img'));
+  assert.match(run("kpiSel(K2,'c')"),/<option value="" >— Chọn chỉ tiêu KPI —<\/option>.*<option value="c" selected>/);
+});

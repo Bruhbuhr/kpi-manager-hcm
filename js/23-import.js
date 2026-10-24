@@ -123,3 +123,41 @@ SUB['imp-save']=()=>{
   const n=good.length;closeModal();toast(`Đã nhập ${n} bảng KPI`);
   if(n===1){(ui.f['emp/'+lastId]??={}).year=String(lastY);delete ui.f['emp/'+lastId].mm;if(location.hash==='#/emp/'+lastId)render(false);else location.hash='#/emp/'+lastId}else rerender();
 };
+
+/* ---------- Nhập danh mục chỉ tiêu KPI (Khung 2) – Admin / Quản lý. Một file cho cả phòng: mỗi sheet "Individual KPIs…" là một nhân viên ---------- */
+ACT['kc-imp']=el=>{
+  if(!can('manage'))return toast('Chỉ quản lý được nhập danh mục chỉ tiêu KPI.','error');
+  IMP={kc:1,items:[],err:'',y:el.dataset.y||curYear()};   /* dùng chung biến IMP: đóng hộp thoại là tự xoá */
+  modal('Nhập danh mục chỉ tiêu KPI (Excel)',`<form id="mf" data-submit="kc-imp-save">
+    <p class="note" style="padding-top:0">Chọn file Excel KPI cá nhân có các sheet <b>Individual KPIs – tên nhân viên</b>. App đọc mục <b>I · KPI Công ty và hoạt động của phòng</b> của từng sheet và gắn cho nhân viên có cùng <b>Mã NV</b> (ô F4). Điểm của các việc không thay đổi. Nhập lại thì danh mục theo đúng file.</p>
+    <div class="drop" id="kc-drop"><input class="in" type="file" id="kc-file" accept=".xlsx,.xlsm" aria-label="File Excel danh mục chỉ tiêu KPI"><small class="muted">hoặc kéo thả file vào đây</small></div>
+    <div id="kc-list"></div></form>`,{footer:cancelBtn+'<button class="btn primary" form="mf" id="kc-ok" disabled>Nhập</button>',size:'wide'});
+  const dz=$('#kc-drop');
+  ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over')}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over')}));
+  dz.addEventListener('drop',e=>kcRead(e.dataTransfer.files[0]));
+  $('#kc-file').addEventListener('change',e=>kcRead(e.target.files[0]));
+};
+async function kcRead(f){
+  if(!IMP||!IMP.kc||!f)return;
+  if(!window.XLSX)return toast('Chưa tải được thư viện Excel (SheetJS). Kiểm tra kết nối mạng.','error');
+  const box=$('#kc-list');if(box)box.innerHTML='<p class="note" role="status">Đang đọc file…</p>';
+  let items=[],err='';
+  try{items=parseKpiCatalog(XLSX.read(await f.arrayBuffer(),{type:'array'}));if(!items.length)err='File không có sheet “Individual KPIs…”. File việc tháng theo mẫu KPI_Individual_report (sheet Summary + M01…M12) thì dùng nút “⬆ Nhập Excel KPI”.'}
+  catch(e){err='Không đọc được file. Hãy chọn file .xlsx có các sheet “Individual KPIs…”.'}
+  if(!IMP)return;
+  IMP.err=err;IMP.items=items.map(x=>({...x,year:x.year||+IMP.y,e:x.code?empByCode(x.code):null}));kcRender();
+}
+/* Bảng xem trước: ai được nhập, tổng trọng số so với chuẩn Khung 2, chỉ tiêu bị bỏ và số việc sẽ về "Chưa phân loại" */
+function kcRender(){
+  const box=$('#kc-list'),ok=$('#kc-ok');if(!box||!IMP)return;const P=kpi2(),good=IMP.items.filter(x=>x.e);
+  box.innerHTML=IMP.err?`<p class="note tag-bad">${esc(IMP.err)}</p>`:miniTable(['Sheet','Nhân viên','Năm','Số chỉ tiêu','Tổng trọng số','Chỉ tiêu bị bỏ','Kết quả'],IMP.items.map(x=>{
+    if(!x.e)return `<tr><td>${esc(x.sheet)}</td><td>${esc(x.name)}<small>${esc(x.code)}</small></td><td colspan="4" class="tag-bad">${x.code?`Mã NV ${esc(x.code)} chưa có trong danh sách nhân viên. Nhờ Admin thêm nhân viên trước.`:'Sheet không có Mã NV (ô F4).'}</td><td>${badge('bad','Bỏ qua')}</td></tr>`;
+    const m=kpiMerge(kpiOf(x.e.id,x.year),x.rows),drop=new Set(m.dropped.map(r=>r.id)),lost=kpiUse(x.e.id,x.year,id=>drop.has(id)),tot=r2(kpiRows(x).reduce((a,r)=>a+r.w,0)),cur=sheetOf(x.e.id,x.year);
+    return `<tr><td>${esc(x.sheet)}</td><td><b>${esc(x.e.name)}</b><small>${esc(x.code)}</small></td><td class="num">${x.year}</td><td class="num">${kpiRows(x).length}</td><td class="num"><span class="${Math.abs(tot-P.userStd)>=0.01?'tag-warn':''}">${fmtK(tot)}</span><small>chuẩn ${P.userStd}</small></td><td>${m.dropped.length?`${m.dropped.map(r=>esc(kpiLabel(r.text))).join('; ')}<small class="tag-warn">${lost.n} việc về “Chưa phân loại”${lost.n?' · '+esc(lost.by):''}</small>`:'<span class="muted">—</span>'}</td><td>${cur&&cur.kpi?badge('warn','Cập nhật'):badge('ok','Thêm mới')}</td></tr>`}),'Không có sheet nào.');
+  if(ok){ok.disabled=!good.length;ok.textContent=good.length?`Nhập cho ${good.length} nhân viên`:'Nhập'}
+}
+SUB['kc-imp-save']=()=>{
+  if(!IMP||!IMP.kc||!can('manage'))return;const good=IMP.items.filter(x=>x.e);if(!good.length)return;
+  if(transact(()=>good.forEach(x=>{const sh=sheetOf(x.e.id,x.year,true);sh.kpi={sec:x.sec,rows:kpiMerge(kpiOf(x.e.id,x.year),x.rows).rows};sh.updatedAt=todayStr()})))done(`Đã nhập danh mục chỉ tiêu KPI cho ${good.length} nhân viên`);
+};
