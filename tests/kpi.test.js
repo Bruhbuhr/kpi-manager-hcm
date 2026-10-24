@@ -99,3 +99,23 @@ test('kpiSel: dòng trống đầu được chọn khi chưa gắn / chỉ tiêu
   assert.ok(!h.includes('<img'));
   assert.match(run("kpiSel(K2,'c')"),/<option value="" >— Chọn chỉ tiêu KPI —<\/option>.*<option value="c" selected>/);
 });
+
+test('monthTable Khung 2: có danh mục → dòng I / nhóm / chỉ tiêu / Chưa phân loại, chân bảng thêm 1 cột; không có danh mục → như cũ',()=>{
+  /* nạp thêm phần giao diện (bảng, nhãn trạng thái, file bằng chứng) với DOM giả tối thiểu */
+  const el=()=>({set innerHTML(v){this._t=String(v).replace(/<[^>]*>/g,'')},get textContent(){return this._t||''}});
+  Object.assign(ctx,{window:{addEventListener(){},matchMedia:()=>({matches:false})},document:{addEventListener(){},querySelector:()=>null,createElement:el}});
+  for(const f of['10-ui-core.js','20-dashboard.js','22-evidence.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..','js',f),'utf8'),ctx,{filename:f});
+  run(`db=defaultDB();session={role:'admin',name:'A'};ui.key='t';db.employees.push({id:'e5',code:'S5',name:'D',active:true});
+    sheetOf('e5',2026,true).months['10'].tasks.push({id:'x1',title:'Lau phòng họp',weight:9,deadline:'2026-10-10',submitted:'2026-10-10',approval:'Duyệt',note:'',kpi:'c'},{id:'x2',title:'Việc chưa gắn',weight:1,deadline:'2026-10-11',submitted:'2026-10-11',approval:'',note:''})`);
+  const html=()=>run("(()=>{const st=monthStats(sheetOf('e5',2026).months['10'],'2026-10');return monthTable(empOf('e5'),'2026','10',st,{rows:st.rows,kind:'user'})})()");
+  const flat=html();
+  assert.ok(!flat.includes('kh-sec')&&!flat.includes('data-kpi'));
+  assert.ok(flat.includes('<td colspan="2">Khung 2 · By User</td>'));
+  run("sheetOf('e5',2026).kpi={sec:'KPI Công ty',rows:[{id:'a',no:'1',text:'Solo',w:10},{id:'b',no:'3',text:'Vệ sinh',w:null},{id:'c',no:'',text:'Các phòng họp',w:40}]}");
+  const g=html();
+  for(const c of['class="kh kh-sec"','class="kh kh-cat"','class="kh kh-line"','class="kh kh-none"','class="kt"'])assert.ok(g.includes(c),c);
+  assert.ok(g.includes('<td colspan="3">Khung 2 · By User</td>'));   /* thêm cột Trọng số nhóm */
+  assert.match(g,/<select class="in" name="kpi" data-kpi data-e="e5" data-y="2026" data-mm="10" data-id="x2"/);   /* việc chưa gắn có ô chọn */
+  assert.ok(!g.includes('data-id="x1" aria-label="Chỉ tiêu KPI'));   /* việc đã gắn thì không */
+  assert.ok(g.indexOf('Lau phòng họp')>g.indexOf('Các phòng họp')&&g.indexOf('Việc chưa gắn')>g.indexOf('Chưa phân loại'));
+});
