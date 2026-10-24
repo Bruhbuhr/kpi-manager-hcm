@@ -176,7 +176,7 @@ function monthTable(e,y,mm,st,opt={}){
   const cols=[
     {h:'STT',c:'num',f:r=>grp?'':r.i+1,x:r=>grp?'':r.i+1,hf:h=>esc(kpiNo(h)),hx:kpiNo},
     grp?{h:'Trọng số nhóm',c:'num',f:()=>'',x:()=>'',hf:h=>h.lv==='sec'?P.userStd+'%':'',hx:h=>h.lv==='sec'?P.userStd+'%':''}:null,
-    {h:'Nội dung công việc / Đóng góp',c:'ttl',f:r=>`${r.t.carriedFrom?`<span class="pf">Chuyển từ ${mLbl(r.t.carriedFrom.month,r.t.carriedFrom.year,y)}</span>`:''}${tagBd(r.t)}${grpBd(r.t,e.id)}<span class="tt">${esc(r.t.title)}</span>${grp&&w&&r.sc.state!=='moved'&&!kpiHas(kc,r.t.kpi)?kpiSel(kc,'',`data-kpi data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" aria-label="Chỉ tiêu KPI cho việc ${r.i+1}"`):''}`,x:r=>r.t.title,
+    {h:'Nội dung công việc / Đóng góp',c:'ttl',f:r=>`${r.t.carriedFrom?`<span class="pf">Chuyển từ ${mLbl(r.t.carriedFrom.month,r.t.carriedFrom.year,y)}</span>`:''}${tagBd(r.t)}${grpBd(r.t,e.id)}<span class="tt">${esc(r.t.title)}</span>${grp&&w&&r.sc.state!=='moved'&&!kpiHas(kc,r.t.kpi)?`<span class="kpw">${kpiSel(kc,'',`data-kpi aria-label="Chỉ tiêu KPI cho việc ${r.i+1}"`)}<button type="button" class="btn sm" data-act="kpi-set" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" disabled aria-label="Gắn chỉ tiêu KPI cho việc ${r.i+1}">Gắn</button></span>`:''}`,x:r=>r.t.title,
       hf:h=>h.lv==='none'?`<span class="tt">Chưa phân loại</span><small>${w?'Chọn chỉ tiêu KPI cho từng việc ở ô bên dưới.':'Các việc chưa được gắn chỉ tiêu KPI.'}</small>`:kpiTtl(h.lv==='line'?h.row.text:h.text,h.lv==='line'?'▸ ':'',h.row&&h.row.rule),
       hx:h=>h.lv==='none'?'Chưa phân loại':h.lv==='line'?h.row.text:h.text},
     {h:'Giao bởi / Tag / Làm chung',xonly:1,x:r=>tagText(r.t)},
@@ -278,17 +278,19 @@ SUB['kc-save']=form=>{
   if(sh0&&sh0.kpi&&sig(sh0.kpi)===sig(next)){closeModal();return toast('Không có thay đổi.')}
   if(transact(()=>{const sh=sheetOf(e,y,true);sh.kpi=next;sh.updatedAt=todayStr()}))done('Đã lưu danh mục chỉ tiêu KPI');
 };
-/* Gắn chỉ tiêu KPI ngay trên bảng cho việc ở "Chưa phân loại". Chỉ ghi task.kpi (không đổi điểm, không đụng trạng thái duyệt) nên nhân viên
-   gắn được cả việc đã Duyệt; việc đã Duyệt mà đã có chỉ tiêu thì chỉ quản lý đổi (trong hộp Sửa việc). */
-document.addEventListener('change',ev=>{
-  const el=ev.target.closest&&ev.target.closest('select[data-kpi]');if(!el||!el.value)return;
+/* Gắn chỉ tiêu KPI ngay trên bảng cho việc ở "Chưa phân loại": chọn trong ô rồi bấm Gắn. Đổi lựa chọn chưa lưu, vì Chrome / Edge trên Windows
+   phát change ngay khi bấm phím mũi tên. Chỉ ghi task.kpi (không đổi điểm, không đụng trạng thái duyệt) nên nhân viên gắn được cả việc đã Duyệt;
+   việc đã Duyệt mà đã có chỉ tiêu thì chỉ quản lý đổi (trong hộp Sửa việc). */
+document.addEventListener('change',ev=>{const el=ev.target.closest&&ev.target.closest('select[data-kpi]');if(!el)return;const b=el.parentElement.querySelector('[data-act="kpi-set"]');if(b)b.disabled=!el.value});
+ACT['kpi-set']=el=>{
+  const s=el.parentElement.querySelector('select[data-kpi]'),v=s&&s.value;if(!v)return toast('Chọn chỉ tiêu KPI trước.','warn');
   const {e,y,mm,id}=el.dataset;if(!canSheet(e))return toast('Bạn không có quyền.','error');
   if(transact(()=>{const sh=sheetOf(e,y),t=sh&&by(sh.months[mm].tasks,id),k=kpiOf(e,y);
     if(!t||byMgr(t))throw new Error('Việc này không còn tồn tại.');
-    if(!kpiHas(k,el.value))throw new Error('Chỉ tiêu này không còn trong danh mục.');
+    if(!kpiHas(k,v))throw new Error('Chỉ tiêu này không còn trong danh mục.');
     if(kpiHas(k,t.kpi)&&!canTask(e,t))throw new Error('Việc đã được Duyệt và đã có chỉ tiêu KPI; nhờ quản lý đổi nếu cần.');
-    t.kpi=el.value;sh.updatedAt=todayStr()})){ui.kjust=id;refreshTbl();toast('Đã gắn chỉ tiêu KPI');kpiJust()}else refreshTbl();
-});
+    t.kpi=v;sh.updatedAt=todayStr()})){ui.kjust=id;refreshTbl();toast('Đã gắn chỉ tiêu KPI');kpiJust()}else refreshTbl();
+};
 /* việc vừa gắn chỉ tiêu chuyển lên dòng chỉ tiêu của nó: cuộn tới, giữ con trỏ bàn phím ở dòng đó, hiện dấu "vừa chuyển" một lần */
 function kpiJust(){const tr=$('tr.kj');ui.kjust='';if(!tr)return;const rm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   tr.scrollIntoView({block:'center',behavior:rm?'auto':'smooth'});const b=tr.querySelector('td.act button');if(b)b.focus({preventScroll:true});else{tr.tabIndex=-1;tr.focus({preventScroll:true})}}

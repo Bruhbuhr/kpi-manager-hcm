@@ -856,6 +856,7 @@ table.t tr.kh td.num small{white-space:normal}   /* "chỉ tiêu 40%" xuống d�
 table.t tr.kh-line td.ttl,table.t tr.kh-hdr td.ttl{padding-left:18px}
 table.t tr.kt td.ttl{padding-left:30px}
 table.t td.ttl select[data-kpi]{display:block;margin-top:6px;max-width:100%;font-size:12.5px;padding:3px 6px;border-color:#f0d49a;background-color:var(--warn-s)}
+table.t td.ttl .kpw{display:flex;gap:6px;align-items:center;margin-top:6px}table.t td.ttl .kpw select[data-kpi]{margin-top:0;flex:1 1 auto;min-width:0}   /* ô chọn + nút Gắn cùng một hàng */
 table.t.kce td{vertical-align:top}
 table.t.kce input[name=no]{width:58px}
 table.t.kce input[name=w]{width:84px}

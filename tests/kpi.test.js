@@ -115,8 +115,9 @@ test('monthTable Khung 2: có danh mục → dòng I / nhóm / chỉ tiêu / Ch�
   const g=html();
   for(const c of['class="kh kh-sec"','class="kh kh-cat"','class="kh kh-line"','class="kh kh-none"','class="kt"'])assert.ok(g.includes(c),c);
   assert.ok(g.includes('<td colspan="3">Khung 2 · By User</td>'));   /* thêm cột Trọng số nhóm */
-  assert.match(g,/<select class="in" name="kpi" data-kpi data-e="e5" data-y="2026" data-mm="10" data-id="x2"/);   /* việc chưa gắn có ô chọn */
-  assert.ok(!g.includes('data-id="x1" aria-label="Chỉ tiêu KPI'));   /* việc đã gắn thì không */
+  assert.match(g,/<select class="in" name="kpi" data-kpi aria-label="Chỉ tiêu KPI cho việc \d+">/);   /* việc chưa gắn có ô chọn … */
+  assert.match(g,/data-act="kpi-set" data-e="e5" data-y="2026" data-mm="10" data-id="x2" disabled/);   /* … và nút Gắn (tắt đến khi chọn) */
+  assert.ok(!g.includes('data-act="kpi-set" data-e="e5" data-y="2026" data-mm="10" data-id="x1"'));   /* việc đã gắn thì không */
   assert.ok(g.indexOf('Lau phòng họp')>g.indexOf('Các phòng họp')&&g.indexOf('Việc chưa gắn')>g.indexOf('Chưa phân loại'));
 });
 
@@ -137,7 +138,7 @@ test('ktSave: chỉ tiêu KPI bắt buộc với việc mới / khi nhân viên 
 });
 
 test('Gắn chỉ tiêu ngay trên bảng: được cả với việc đã Duyệt chưa gắn, không đổi điểm / duyệt; nhân viên không đổi việc đã Duyệt đã gắn',()=>{
-  const fire=(id,val)=>{const el={value:val,dataset:{e:'e6',y:'2026',mm:'10',id}};(ctx.L.change||[]).forEach(f=>f({target:{closest:s=>s==='select[data-kpi]'?el:null}}))};
+  const fire=(id,val)=>ctx.ACT['kpi-set']({dataset:{e:'e6',y:'2026',mm:'10',id},parentElement:{querySelector:s=>s==='select[data-kpi]'?{value:val}:null}});   /* bấm nút Gắn */
   run(`session={role:'staff',empId:'e6',name:'E'};sheetOf('e6',2026).months['10'].tasks.push({id:'ap',title:'Đã duyệt',weight:4,deadline:'2026-10-06',submitted:'2026-10-06',approval:'Duyệt',note:''})`);
   const p0=run("monthStats(sheetOf('e6',2026).months['10'],'2026-10').p80");
   fire('ap','a');
@@ -176,4 +177,14 @@ test('kpiMerge: hai chỉ tiêu trùng nội dung giữ đúng id khi nhập l�
   assert.deepEqual(m2.rows.map(r=>[r.w,r.id]),m1.rows.map(r=>[r.w,r.id]));   /* 30 giữ id của 30, 50 giữ id của 50 */
   assert.deepEqual(m3.rows.map(r=>r.id),m1.rows.map(r=>r.id));
   assert.equal(m2.dropped.length,0);
+});
+
+test('Ô chọn chỉ tiêu ở Chưa phân loại: đổi lựa chọn (kể cả bằng phím mũi tên) chưa lưu, chỉ bật nút Gắn; bấm Gắn mới lưu',()=>{
+  run(`session={role:'admin',name:'A'};sheetOf('e6',2026).months['10'].tasks.push({id:'kb',title:'Phím',weight:2,deadline:'2026-10-07',submitted:'2026-10-07',approval:'',note:''})`);
+  const btn={disabled:true},sel={value:'a',dataset:{e:'e6',y:'2026',mm:'10',id:'kb'},parentElement:{querySelector:s=>s.includes('kpi-set')?btn:null}};
+  (ctx.L.change||[]).forEach(f=>f({target:{closest:s=>s==='select[data-kpi]'?sel:null}}));   /* Chrome / Edge trên Windows phát change ngay khi bấm mũi tên */
+  assert.equal(run("'kpi' in by(sheetOf('e6',2026).months['10'].tasks,'kb')"),false);   /* chưa lưu */
+  assert.equal(btn.disabled,false);   /* nút Gắn bật lên */
+  ctx.ACT['kpi-set']({dataset:{e:'e6',y:'2026',mm:'10',id:'kb'},parentElement:{querySelector:s=>s==='select[data-kpi]'?sel:null}});
+  assert.equal(run("by(sheetOf('e6',2026).months['10'].tasks,'kb').kpi"),'a');
 });
