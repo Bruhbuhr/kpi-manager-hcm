@@ -34,7 +34,7 @@ function parseKpiWorkbook(wb){
 
 /* =====================================================================
    DANH MỤC CHỈ TIÊU KPI (Khung 2) – file Excel KPI cá nhân có các sheet "Individual KPIs – <tên>"
-   Đọc mục I (từ dòng có cột A = I đến trước dòng II) và mục II (20%, đến trước dòng III) của từng sheet, ghép nhân viên theo Mã NV (ô F4).
+   Đọc mục I (từ dòng có cột A = I đến trước dòng II) của từng sheet, ghép nhân viên theo Mã NV (ô F4).
    Chỉ Admin / Quản lý. Không đổi điểm của việc. Nhập lại thì danh mục theo đúng file (xem kpiMerge).
    ===================================================================== */
 function parseKpiCatalog(wb){
@@ -42,17 +42,17 @@ function parseKpiCatalog(wb){
   return wb.SheetNames.filter(n=>/^individual kpis/i.test(n.trim())).map(n=>{
     const ws=wb.Sheets[n];let r0=0;
     for(let r=1;r<=60&&!r0;r++)if(s(cv(ws,'A'+r))==='I')r0=r;   /* ponytail: mẫu hiện tại có mục I ở dòng 10; quét 60 dòng đầu, mẫu đổi thì nâng số này */
-    /* các dòng của một mục: từ sau dòng tiêu đề mục đến trước mục kế tiếp (II, III…) hoặc dòng "Tổng điểm" */
-    const part=h=>{const rows=[];for(let r=h+1;h&&r<=h+80;r++){
-        const a=s(cv(ws,'A'+r)),text=s(cv(ws,'C'+r));if(/^[IVX]+$/.test(a)||/^tổng điểm/i.test(text))break;
-        const g=cv(ws,'G'+r),w=typeof g==='number'?r2(g*100):null,last=rows[rows.length-1];
-        if(!text&&w==null&&!a)continue;
-        if(!a&&w==null&&last&&last.no&&!last.text&&last.w==null){last.text=text;continue}   /* sheet Chau: dòng số nhóm để trống, tên nhóm ở dòng dưới */
-        rows.push({no:/^\d+$/.test(a)?a:'',text,w,rule:s(cv(ws,'H'+r))})}
-      const taken=new Set();rows.forEach(k=>{k.id=kpiId(k.text||k.no,taken);taken.add(k.id)});return rows};
-    let rII=0;for(let r=r0+1;r0&&r<=r0+80&&!rII;r++)if(s(cv(ws,'A'+r))==='II')rII=r;
-    return{sheet:n.trim(),code:s(cv(ws,'F4')),name:s(cv(ws,'C3')),year:+((/nam\s*(\d{4})/.exec(norm(cv(ws,'A1')))||[])[1]||0)||null,
-      sec:r0?s(cv(ws,'C'+r0)):'',secW:r0?r2((+cv(ws,'B'+r0)||0)*100):0,rows:part(r0),ii:rII?{sec:s(cv(ws,'C'+rII)),rows:part(rII)}:null};
+    const x={sheet:n.trim(),code:s(cv(ws,'F4')),name:s(cv(ws,'C3')),year:+((/nam\s*(\d{4})/.exec(norm(cv(ws,'A1')))||[])[1]||0)||null,
+      sec:r0?s(cv(ws,'C'+r0)):'',secW:r0?r2((+cv(ws,'B'+r0)||0)*100):0,rows:[]};
+    for(let r=r0+1;r0&&r<=r0+80;r++){
+      const a=s(cv(ws,'A'+r));if(/^[IVX]+$/.test(a))break;   /* gặp mục II là hết mục I */
+      const text=s(cv(ws,'C'+r)),g=cv(ws,'G'+r),w=typeof g==='number'?r2(g*100):null,last=x.rows[x.rows.length-1];
+      if(!text&&w==null&&!a)continue;
+      if(!a&&w==null&&last&&last.no&&!last.text&&last.w==null){last.text=text;continue}   /* sheet Chau: dòng số nhóm để trống, tên nhóm ở dòng dưới */
+      x.rows.push({no:/^\d+$/.test(a)?a:'',text,w,rule:s(cv(ws,'H'+r))});
+    }
+    const taken=new Set();x.rows.forEach(k=>{k.id=kpiId(k.text||k.no,taken);taken.add(k.id)});
+    return x;
   });
 }
 /* Quyền nhập: Admin – mọi file, tạo được nhân viên mới · Quản lý – nhân viên đã có trong danh sách · Nhân viên – chỉ file của chính mình (Mã NV trùng),
@@ -159,6 +159,5 @@ function kcRender(){
 }
 SUB['kc-imp-save']=()=>{
   if(!IMP||!IMP.kc||!can('manage'))return;const good=IMP.items.filter(x=>x.e);if(!good.length)return;
-  if(transact(()=>good.forEach(x=>{const old=kpiOf(x.e.id,x.year),sh=sheetOf(x.e.id,x.year,true),ii=x.ii?{sec:x.ii.sec,rows:kpiMerge(old&&old.ii,x.ii.rows).rows}:old&&old.ii?JSON.parse(JSON.stringify(old.ii)):null;
-    sh.kpi={sec:x.sec,rows:kpiMerge(old,x.rows).rows,...(ii?{ii}:{})};sh.updatedAt=todayStr()})))   /* ii = mục II (20%); file không có mục II thì giữ mục II đang có */done(`Đã nhập danh mục chỉ tiêu KPI cho ${good.length} nhân viên`);
+  if(transact(()=>good.forEach(x=>{const sh=sheetOf(x.e.id,x.year,true);sh.kpi={sec:x.sec,rows:kpiMerge(kpiOf(x.e.id,x.year),x.rows).rows};sh.updatedAt=todayStr()})))done(`Đã nhập danh mục chỉ tiêu KPI cho ${good.length} nhân viên`);
 };

@@ -862,7 +862,6 @@ tr.kd1{--kb:hsl(212 62% 91%);--ks:hsl(212 48% 50%)}tr.kd2{--kb:hsl(152 50% 94%);
 table.t tr.kh[class*=" kd"] td,table.t tbody tr.kh[class*=" kd"]:hover td,table.t tr.kh[class*=" kd"] td.act{background:var(--kb)}
 table.t tr.kh[class*=" kd"] td:first-child{box-shadow:inset 4px 0 0 var(--ks)}
 table.t.kce td{vertical-align:top}
-table.t.kii{margin-bottom:10px}table.t.kii td.ttl{min-width:240px}   /* mục II (Excel) trong phần Tuân thủ của Khung 1 */
 table.t.kce input[name=no]{width:58px}
 table.t.kce input[name=w]{width:84px}
 table.t.kce textarea{min-width:220px;font-size:13px}
