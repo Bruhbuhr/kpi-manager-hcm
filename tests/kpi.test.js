@@ -218,3 +218,17 @@ test('Sửa một dòng danh mục: chỉ đổi dòng đó, giữ id (việc v�
   save('a',{no:'1',text:'Solo 2027',w:'10',rule:''},'2027');
   assert.equal(row('a',2027).text,'Solo 2027');assert.equal(row('a',2026).text,'Solo');
 });
+
+test('Sửa một dòng: ô trọng số trình duyệt không đọc được (badInput) bị báo lỗi, không lặng lẽ biến chỉ tiêu thành dòng tiêu đề; năm dùng tạm danh mục năm trước có ghi chú',()=>{
+  const toasts=[];ctx.toast=m=>toasts.push(m);
+  const fld=extra=>{const o={cls:[],...extra};o.classList={add:c=>o.cls.push(c),remove(){}};o.setAttribute=()=>{};o.focus=()=>{};return o};
+  const f={w:fld({validity:{badInput:true}}),text:fld()};
+  ctx.FB={dataset:{e:'e8',y:'2026',id:'a'},_data:{no:'1',text:'Solo',w:'',rule:''},querySelector:s=>f[/name=(\w+)/.exec(s)[1]]};
+  run("session={role:'member',name:'Q'};globalThis.SUB['kc-row-save'](FB)");
+  assert.deepEqual(f.w.cls,['bad']);assert.match(toasts.pop(),/phải là số/);
+  assert.equal(run("sheetOf('e8',2026).kpi.rows.find(r=>r.id==='a').w"),10);   /* vẫn là chỉ tiêu, không thành tiêu đề */
+  let body='';ctx.modal=(t,b)=>{body=b};
+  ctx.ACT['kc-row']({dataset:{e:'e8',y:'2028',id:'a'}});   /* 2028 chưa có danh mục riêng → dùng tạm 2027 */
+  assert.match(body,/Đang dùng tạm danh mục năm 2027/);
+  ctx.ACT['kc-row']({dataset:{e:'e8',y:'2026',id:'a'}});assert.ok(!/Đang dùng tạm/.test(body));
+});

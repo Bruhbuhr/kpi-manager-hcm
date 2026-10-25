@@ -285,14 +285,15 @@ SUB['kc-save']=form=>{
 ACT['kc-row']=el=>{
   if(!can('manage'))return toast('Chỉ quản lý được sửa danh mục chỉ tiêu KPI.','error');
   const {e,y,id}=el.dataset,k=kpiOf(e,y);if(!k)return toast('Chưa có danh mục chỉ tiêu KPI.','warn');
+  const own=!!(sheetOf(e,y)&&sheetOf(e,y).kpi),tmp=own?'':`Đang dùng tạm danh mục năm ${+y-1}; Lưu sẽ tạo danh mục riêng cho năm ${esc(y)} (năm ${+y-1} giữ nguyên). `;
   const form=(body,note)=>`<form id="mf" data-submit="kc-row-save" data-e="${esc(e)}" data-y="${esc(y)}" data-id="${esc(id||'')}" novalidate><div class="fg">${body}<p class="note full" style="padding:0">${note}</p></div></form>`,ft={footer:cancelBtn+'<button class="btn primary" form="mf">Lưu</button>'};
-  if(!id)return modal(`Sửa mục I · ${empName(e)} · ${y}`,form(inp('sec','Tên mục I',k.sec||'',{full:1}),'Tên mục I hiện ở dòng đầu của Khung 2.'),ft);
+  if(!id)return modal(`Sửa mục I · ${empName(e)} · ${y}`,form(inp('sec','Tên mục I',k.sec||'',{full:1}),tmp+'Tên mục I hiện ở dòng đầu của Khung 2.'),ft);
   const r=k.rows.find(x=>x.id===id);if(!r)return toast('Dòng này không còn trong danh mục.','error');
   const u=kpiUse(e,y,x=>x===id);
   modal(`Sửa ${r.no?'nhóm '+r.no:r.w==null?'dòng tiêu đề':'chỉ tiêu'} · ${empName(e)} · ${y}`,form(
     `${inp('no','Nhóm số <small class="muted">(để trống = thuộc nhóm phía trên)</small>',r.no||'')}${inp('w','Trọng số chỉ tiêu (%) <small class="muted">(để trống = dòng tiêu đề)</small>',r.w!=null&&Number.isFinite(+r.w)?+r.w:'',{type:'number',step:'any',attrs:'min="0" max="100" inputmode="decimal"'})}
     ${txa('text','Chỉ tiêu <i style="color:var(--bad);font-style:normal">*</i>',r.text||'',{full:1,rows:3})}${txa('rule','Quy ước đánh giá',r.rule||'',{full:1,rows:3})}`,
-    `${u.n?`Đang gắn ${u.n} việc (${esc(u.by)}); sửa nội dung không làm mất các việc đã gắn. `:''}Điểm của việc không đổi. Thêm / xoá dòng: nút <b>Chỉ tiêu KPI</b> ở đầu Khung 2.`),ft);
+    `${tmp}${u.n?`Đang gắn ${u.n} việc (${esc(u.by)}); sửa nội dung không làm mất các việc đã gắn. `:''}Điểm của việc không đổi. Thêm / xoá dòng: nút <b>Chỉ tiêu KPI</b> ở đầu Khung 2.`),ft);
 };
 document.addEventListener('input',ev=>{const f=ev.target.closest&&ev.target.closest('form[data-submit="kc-row-save"]');if(f){ev.target.classList.remove('bad');ev.target.removeAttribute('aria-invalid')}});
 SUB['kc-row-save']=form=>{
@@ -302,16 +303,18 @@ SUB['kc-row-save']=form=>{
   let next,same;
   if(!id){next={sec:String(f.sec||'').trim()};same=(k.sec||'')===next.sec}
   else{const r=k.rows.find(x=>x.id===id);if(!r)return toast('Dòng này không còn trong danh mục.','error');
-    const text=String(f.text||'').trim(),ws=String(f.w??'').trim(),w=ws===''?null:Number(ws.replace(',','.'));
+    const text=String(f.text||'').trim(),ws=String(f.w??'').trim(),w=ws===''?null:Number(ws.replace(',','.')),wEl=form.querySelector('[name=w]');
+    if(wEl&&wEl.validity&&wEl.validity.badInput)return bad('w','Trọng số chỉ tiêu phải là số, ví dụ 40 hoặc 12.5.');   /* novalidate: ô số gõ sai trả về '' – không coi là để trống */
     if(!text)return bad('text','Cần có nội dung Chỉ tiêu.');
     if(w!=null&&!(w>=0&&w<=100))return bad('w','Trọng số chỉ tiêu phải từ 0 đến 100.');
     next={no:String(f.no||'').trim().replace(/\.$/,''),text,w,rule:String(f.rule||'').trim()};
     same=['no','text','rule'].every(p=>(r[p]||'')===next[p])&&(r.w??null)===next.w;
     if(!same&&r.w!=null&&w==null){const u=kpiUse(e,y,x=>x===id);if(u.n&&!confirm(`Để trống trọng số thì dòng này thành dòng tiêu đề và ${u.n} việc đang gắn (${u.by}) về “Chưa phân loại”. Tiếp tục?`))return}}
-  if(same){closeModal();return toast('Không có thay đổi.')}
+  const back=()=>{const b=[...document.querySelectorAll('[data-act="kc-row"]')].find(x=>x.dataset.id===(id||''));if(b)b.focus()};   /* con trỏ về lại nút Sửa của dòng */
+  if(same){closeModal();back();return toast('Không có thay đổi.')}
   if(transact(()=>{const sh=sheetOf(e,y,true);if(!sh.kpi)sh.kpi=JSON.parse(JSON.stringify(k));   /* năm đang dùng tạm danh mục năm trước: chép sang năm này */
     if(id)Object.assign(sh.kpi.rows.find(x=>x.id===id),next);else sh.kpi.sec=next.sec;sh.updatedAt=todayStr()})){
-    done('Đã lưu chỉ tiêu KPI');const b=[...document.querySelectorAll('[data-act="kc-row"]')].find(x=>x.dataset.id===(id||''));if(b)b.focus()}   /* con trỏ về lại nút Sửa của dòng vừa sửa */
+    done('Đã lưu chỉ tiêu KPI');back()}
 };
 /* Gắn chỉ tiêu KPI ngay trên bảng cho việc ở "Chưa phân loại": chọn trong ô rồi bấm Gắn. Đổi lựa chọn chưa lưu, vì Chrome / Edge trên Windows
    phát change ngay khi bấm phím mũi tên. Chỉ ghi task.kpi (không đổi điểm, không đụng trạng thái duyệt) nên nhân viên gắn được cả việc đã Duyệt;
