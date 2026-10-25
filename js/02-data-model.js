@@ -201,13 +201,15 @@ function kpiMerge(old,rows){const o=(old&&old.rows)||[],q=new Map(),taken=new Se
 function kpiGroups(kpi,rows){
   const ids=new Set(kpiRows(kpi).map(r=>r.id)),out=[],z=()=>({wUsed:0,wStd:0,pts:0});
   const sec={lv:'sec',text:(kpi&&kpi.sec)||'KPI Công ty và hoạt động của phòng (KRI)',...z()};out.push(sec);
-  let cat=null,i=0;
-  const put=(id,heads)=>sortRows(rows.filter(r=>(ids.has(r.t.kpi)?r.t.kpi:'')===id)).forEach(r=>{
-    if(r.sc.state!=='moved')heads.forEach(h=>{h.wUsed+=r.sc.w;if(r.sc.counted)h.pts+=r.sc.comp});out.push({lv:'task',r:{...r,i:i++}})});
+  /* màu: mỗi dòng nhóm / tiêu đề / chỉ tiêu một số màu riêng (ci, theo thứ tự); gi = màu của nhóm chứa nó; việc mang ci / gi của chỉ tiêu mình gắn */
+  let cat=null,i=0,c=0;
+  const put=(id,heads,col)=>sortRows(rows.filter(r=>(ids.has(r.t.kpi)?r.t.kpi:'')===id)).forEach(r=>{
+    if(r.sc.state!=='moved')heads.forEach(h=>{h.wUsed+=r.sc.w;if(r.sc.counted)h.pts+=r.sc.comp});out.push({lv:'task',r:{...r,i:i++,...col}})});
   for(const k of (kpi&&kpi.rows)||[]){
-    if(k.no){cat={lv:'cat',id:k.id,no:k.no,text:k.text,row:k.w!=null?k:null,...z()};out.push(cat);if(k.w!=null){cat.wStd=k.w;sec.wStd+=k.w;put(k.id,[sec,cat])}continue}
-    if(k.w==null){out.push({lv:'hdr',id:k.id,text:k.text});continue}
-    const ln={lv:'line',row:k,...z(),wStd:k.w};out.push(ln);sec.wStd+=k.w;if(cat)cat.wStd+=k.w;put(k.id,[sec,...(cat?[cat]:[]),ln]);
+    if(k.no){const ci=c++;cat={lv:'cat',id:k.id,no:k.no,text:k.text,row:k.w!=null?k:null,ci,gi:ci,...z()};out.push(cat);if(k.w!=null){cat.wStd=k.w;sec.wStd+=k.w;put(k.id,[sec,cat],{ci,gi:ci})}continue}
+    const ci=c++,gi=cat?cat.ci:ci;
+    if(k.w==null){out.push({lv:'hdr',id:k.id,text:k.text,ci,gi});continue}
+    const ln={lv:'line',row:k,ci,gi,...z(),wStd:k.w};out.push(ln);sec.wStd+=k.w;if(cat)cat.wStd+=k.w;put(k.id,[sec,...(cat?[cat]:[]),ln],{ci,gi});
   }
   if(rows.some(r=>!ids.has(r.t.kpi))){const nb={lv:'none',...z()};out.push(nb);put('',[sec,nb])}
   out.forEach(h=>{if('pts' in h){h.wUsed=r2(h.wUsed);h.wStd=r2(h.wStd);h.pts=r2(h.pts)}});

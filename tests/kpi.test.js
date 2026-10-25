@@ -113,7 +113,7 @@ test('monthTable Khung 2: có danh mục → dòng I / nhóm / chỉ tiêu / Ch�
   assert.ok(flat.includes('<td colspan="2">Khung 2 · By User</td>'));
   run("sheetOf('e5',2026).kpi={sec:'KPI Công ty',rows:[{id:'a',no:'1',text:'Solo',w:10},{id:'b',no:'3',text:'Vệ sinh',w:null},{id:'c',no:'',text:'Các phòng họp',w:40}]}");
   const g=html();
-  for(const c of['class="kh kh-sec"','class="kh kh-cat"','class="kh kh-line"','class="kh kh-none"','class="kt"'])assert.ok(g.includes(c),c);
+  for(const c of['class="kh kh-sec"','class="kh kh-cat','class="kh kh-line','class="kh kh-none"','class="kt'])assert.ok(g.includes(c),c);   /* nhóm / chỉ tiêu / việc có thêm lớp màu */
   assert.ok(g.includes('<td colspan="3">Khung 2 · By User</td>'));   /* thêm cột Trọng số nhóm */
   assert.match(g,/<select class="in" name="kpi" data-kpi aria-label="Chỉ tiêu KPI cho việc \d+">/);   /* việc chưa gắn có ô chọn … */
   assert.match(g,/data-act="kpi-set" data-e="e5" data-y="2026" data-mm="10" data-id="x2" disabled/);   /* … và nút Gắn (tắt đến khi chọn) */
@@ -231,4 +231,23 @@ test('Sửa một dòng: ô trọng số trình duyệt không đọc được (
   ctx.ACT['kc-row']({dataset:{e:'e8',y:'2028',id:'a'}});   /* 2028 chưa có danh mục riêng → dùng tạm 2027 */
   assert.match(body,/Đang dùng tạm danh mục năm 2027/);
   ctx.ACT['kc-row']({dataset:{e:'e8',y:'2026',id:'a'}});assert.ok(!/Đang dùng tạm/.test(body));
+});
+
+test('Màu chỉ tiêu: mỗi dòng nhóm / tiêu đề / chỉ tiêu một màu riêng (ci); dòng con mang màu nhóm (gi); việc mang màu chỉ tiêu của mình',()=>{
+  ctx.K3={sec:'I',rows:[{id:'a',no:'1',text:'Solo',w:10},{id:'b',no:'2',text:'Nhóm hai',w:null},{id:'c',no:'',text:'Con 1',w:20},{id:'d',no:'',text:'Con 2',w:20},{id:'h',no:'',text:'Tiêu đề',w:null},{id:'f',no:'',text:'Con 3',w:30}]};
+  ctx.T3=[task('p1',5,'a'),task('p2',5,'d'),task('p3',5,'')];
+  const g=run("kpiGroups(K3,T3.map(t=>({t,sc:scoreTask(t,'2026-10-31')})))"),rows=g.filter(x=>['cat','hdr','line'].includes(x.lv));
+  assert.deepEqual(rows.map(x=>x.ci),[0,1,2,3,4,5]);   /* mỗi dòng một màu */
+  assert.deepEqual(rows.map(x=>x.gi),[0,1,1,1,1,1]);   /* dòng con mang màu của nhóm */
+  assert.deepEqual(Object.fromEntries(g.filter(x=>x.lv==='task').map(x=>[x.r.t.id,[x.r.ci??null,x.r.gi??null]])),{p1:[0,0],p2:[3,1],p3:[null,null]});
+});
+
+test('Màu chỉ tiêu trên bảng: dòng nhóm / chỉ tiêu / việc có lớp màu kc / kg; bảng không danh mục không có',()=>{
+  run("session={role:'admin',name:'A'}");
+  const html=id=>run(`(()=>{const st=monthStats(sheetOf('${id}',2026).months['10'],'2026-10');return monthTable(empOf('${id}'),'2026','10',st,{rows:st.rows,kind:'user'})})()`);
+  const g=html('e8');
+  assert.match(g,/class="kh kh-cat kc\d+ kg\d+"/);assert.match(g,/class="kh kh-line kc\d+ kg\d+"/);assert.match(g,/class="kt kc\d+ kg\d+"/);
+  assert.match(g,/class="kh kh-sec"/);   /* mục I giữ màu riêng như cũ (Chưa phân loại: xem test 10) */
+  run("db.employees.push({id:'e9b',code:'S9B',name:'H',active:true});sheetOf('e9b',2026,true).months['10'].tasks.push({id:'z1',title:'Việc',weight:5,deadline:'2026-10-10',submitted:'2026-10-10',approval:'Duyệt',note:''})");
+  assert.ok(!/ k[cg]\d/.test(html('e9b')));   /* không có danh mục: không có lớp màu */
 });
