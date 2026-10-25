@@ -857,14 +857,10 @@ table.t tr.kh-line td.ttl,table.t tr.kh-hdr td.ttl{padding-left:18px}
 table.t tr.kt td.ttl{padding-left:30px}
 table.t td.ttl select[data-kpi]{display:block;margin-top:6px;max-width:100%;font-size:12.5px;padding:3px 6px;border-color:#f0d49a;background-color:var(--warn-s)}
 table.t td.ttl .kpw{display:flex;gap:6px;align-items:center;margin-top:6px}table.t td.ttl .kpw select[data-kpi]{margin-top:0;flex:1 1 auto;min-width:0}   /* ô chọn + nút Gắn cùng một hàng */
-/* màu riêng cho từng nhóm / tiêu đề / chỉ tiêu (12 màu nhạt, lặp lại sau 12 dòng): nền theo màu của dòng, vạch trái theo màu của nhóm;
-   việc có vạch trái theo màu chỉ tiêu mình gắn (trừ việc Re-check / đang tô sáng – giữ vạch đỏ / vàng như cũ) */
-tr.kc0{--h:212}tr.kc1{--h:152}tr.kc2{--h:32}tr.kc3{--h:276}tr.kc4{--h:350}tr.kc5{--h:186}tr.kc6{--h:52}tr.kc7{--h:318}tr.kc8{--h:104}tr.kc9{--h:236}tr.kc10{--h:14}tr.kc11{--h:168}
-tr.kg0{--g:212}tr.kg1{--g:152}tr.kg2{--g:32}tr.kg3{--g:276}tr.kg4{--g:350}tr.kg5{--g:186}tr.kg6{--g:52}tr.kg7{--g:318}tr.kg8{--g:104}tr.kg9{--g:236}tr.kg10{--g:14}tr.kg11{--g:168}
-table.t tr.kh-cat[class*=" kc"] td,table.t tbody tr.kh-cat[class*=" kc"]:hover td,table.t tr.kh-cat[class*=" kc"] td.act{background:hsl(var(--h) 62% 91%)}
-table.t tr.kh-line[class*=" kc"] td,table.t tbody tr.kh-line[class*=" kc"]:hover td,table.t tr.kh-line[class*=" kc"] td.act,table.t tr.kh-hdr[class*=" kc"] td,table.t tbody tr.kh-hdr[class*=" kc"]:hover td,table.t tr.kh-hdr[class*=" kc"] td.act{background:hsl(var(--h) 70% 96%)}
-table.t tr.kh[class*=" kg"] td:first-child{box-shadow:inset 4px 0 0 hsl(var(--g) 48% 52%)}
-table.t tr.kt:not(.recheck):not(.hl)[class*=" kc"] td:first-child{box-shadow:inset 4px 0 0 hsl(var(--h) 48% 58%)}
+/* màu theo cấp (giống nhau cho mọi nhóm cùng cấp): cấp 1 nhóm chính · cấp 2 chỉ tiêu / tiêu đề trong nhóm · cấp 3 chỉ tiêu dưới tiêu đề; việc giữ nền trắng */
+tr.kd1{--kb:hsl(212 62% 91%);--ks:hsl(212 48% 50%)}tr.kd2{--kb:hsl(152 50% 94%);--ks:hsl(152 40% 45%)}tr.kd3{--kb:hsl(36 80% 94%);--ks:hsl(36 70% 50%)}
+table.t tr.kh[class*=" kd"] td,table.t tbody tr.kh[class*=" kd"]:hover td,table.t tr.kh[class*=" kd"] td.act{background:var(--kb)}
+table.t tr.kh[class*=" kd"] td:first-child{box-shadow:inset 4px 0 0 var(--ks)}
 table.t.kce td{vertical-align:top}
 table.t.kce input[name=no]{width:58px}
 table.t.kce input[name=w]{width:84px}
@@ -887,8 +883,5 @@ table.t tr.kj td.ttl{box-shadow:inset 3px 0 0 var(--ok)}
   .mcard table.t tr.kh td:first-child:empty{display:none}
   .mcard table.t tr.kh td[data-l]::before{content:none}
   .mcard table.t tr.kt td.ttl,.mcard table.t tr.kh-line td.ttl,.mcard table.t tr.kh-hdr td.ttl{padding-left:0}
-  .mcard table.t tr.kh-cat[class*=" kc"]{background:hsl(var(--h) 62% 91%)}
-  .mcard table.t tr.kh-line[class*=" kc"],.mcard table.t tr.kh-hdr[class*=" kc"]{background:hsl(var(--h) 70% 96%)}
-  .mcard table.t tr.kh[class*=" kg"]{box-shadow:inset 4px 0 0 hsl(var(--g) 48% 52%);padding-left:10px}
-  .mcard table.t tr.kt:not(.recheck):not(.hl)[class*=" kc"]{box-shadow:inset 4px 0 0 hsl(var(--h) 48% 58%);padding-left:10px}
+  .mcard table.t tr.kh[class*=" kd"]{background:var(--kb);box-shadow:inset 4px 0 0 var(--ks);padding-left:10px}
 }

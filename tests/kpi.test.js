@@ -233,21 +233,20 @@ test('Sửa một dòng: ô trọng số trình duyệt không đọc được (
   ctx.ACT['kc-row']({dataset:{e:'e8',y:'2026',id:'a'}});assert.ok(!/Đang dùng tạm/.test(body));
 });
 
-test('Màu chỉ tiêu: mỗi dòng nhóm / tiêu đề / chỉ tiêu một màu riêng (ci); dòng con mang màu nhóm (gi); việc mang màu chỉ tiêu của mình',()=>{
-  ctx.K3={sec:'I',rows:[{id:'a',no:'1',text:'Solo',w:10},{id:'b',no:'2',text:'Nhóm hai',w:null},{id:'c',no:'',text:'Con 1',w:20},{id:'d',no:'',text:'Con 2',w:20},{id:'h',no:'',text:'Tiêu đề',w:null},{id:'f',no:'',text:'Con 3',w:30}]};
-  ctx.T3=[task('p1',5,'a'),task('p2',5,'d'),task('p3',5,'')];
-  const g=run("kpiGroups(K3,T3.map(t=>({t,sc:scoreTask(t,'2026-10-31')})))"),rows=g.filter(x=>['cat','hdr','line'].includes(x.lv));
-  assert.deepEqual(rows.map(x=>x.ci),[0,1,2,3,4,5]);   /* mỗi dòng một màu */
-  assert.deepEqual(rows.map(x=>x.gi),[0,1,1,1,1,1]);   /* dòng con mang màu của nhóm */
-  assert.deepEqual(Object.fromEntries(g.filter(x=>x.lv==='task').map(x=>[x.r.t.id,[x.r.ci??null,x.r.gi??null]])),{p1:[0,0],p2:[3,1],p3:[null,null]});
+test('Màu theo cấp: mọi nhóm chính cấp 1, mọi chỉ tiêu con / tiêu đề trong nhóm cấp 2, chỉ tiêu dưới tiêu đề cấp 3; việc không mang màu',()=>{
+  ctx.K3={sec:'I',rows:[{id:'a',no:'1',text:'Solo',w:10},{id:'b',no:'2',text:'Nhóm hai',w:null},{id:'c',no:'',text:'Con 1',w:20},{id:'h',no:'',text:'Tiêu đề',w:null},{id:'f',no:'',text:'Con của tiêu đề',w:30},{id:'g',no:'3',text:'Nhóm ba',w:null},{id:'k',no:'',text:'Con 3',w:20}]};
+  ctx.T3=[task('p1',5,'a'),task('p2',5,'f'),task('p3',5,'')];
+  const g=run("kpiGroups(K3,T3.map(t=>({t,sc:scoreTask(t,'2026-10-31')})))");
+  assert.deepEqual(g.filter(x=>['cat','hdr','line'].includes(x.lv)).map(x=>[x.lv,x.d]),[['cat',1],['cat',1],['line',2],['hdr',2],['line',3],['cat',1],['line',2]]);   /* nhóm mới thì quay về cấp 2 */
+  assert.ok(g.filter(x=>x.lv==='task').every(x=>x.r.d==null));
 });
 
-test('Màu chỉ tiêu trên bảng: dòng nhóm / chỉ tiêu / việc có lớp màu kc / kg; bảng không danh mục không có',()=>{
+test('Màu theo cấp trên bảng: lớp kd1 / kd2 / kd3 ở dòng nhóm, chỉ tiêu; việc không có lớp màu; bảng không danh mục không có',()=>{
   run("session={role:'admin',name:'A'}");
   const html=id=>run(`(()=>{const st=monthStats(sheetOf('${id}',2026).months['10'],'2026-10');return monthTable(empOf('${id}'),'2026','10',st,{rows:st.rows,kind:'user'})})()`);
   const g=html('e8');
-  assert.match(g,/class="kh kh-cat kc\d+ kg\d+"/);assert.match(g,/class="kh kh-line kc\d+ kg\d+"/);assert.match(g,/class="kt kc\d+ kg\d+"/);
-  assert.match(g,/class="kh kh-sec"/);   /* mục I giữ màu riêng như cũ (Chưa phân loại: xem test 10) */
+  assert.match(g,/class="kh kh-cat kd1"/);assert.match(g,/class="kh kh-hdr kd2"/);assert.match(g,/class="kh kh-line kd3"/);   /* e8: nhóm 3 → tiêu đề → chỉ tiêu */
+  assert.match(g,/<tr class="kt">/);assert.match(g,/class="kh kh-sec"/);
   run("db.employees.push({id:'e9b',code:'S9B',name:'H',active:true});sheetOf('e9b',2026,true).months['10'].tasks.push({id:'z1',title:'Việc',weight:5,deadline:'2026-10-10',submitted:'2026-10-10',approval:'Duyệt',note:''})");
-  assert.ok(!/ k[cg]\d/.test(html('e9b')));   /* không có danh mục: không có lớp màu */
+  assert.ok(!/ kd\d/.test(html('e9b')));   /* không có danh mục: không có lớp màu */
 });
