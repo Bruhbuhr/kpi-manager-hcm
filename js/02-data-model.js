@@ -205,8 +205,8 @@ function kpiGroups(kpi,rows){
   const put=(id,heads)=>sortRows(rows.filter(r=>(ids.has(r.t.kpi)?r.t.kpi:'')===id)).forEach(r=>{
     if(r.sc.state!=='moved')heads.forEach(h=>{h.wUsed+=r.sc.w;if(r.sc.counted)h.pts+=r.sc.comp});out.push({lv:'task',r:{...r,i:i++}})});
   for(const k of (kpi&&kpi.rows)||[]){
-    if(k.no){cat={lv:'cat',no:k.no,text:k.text,row:k.w!=null?k:null,...z()};out.push(cat);if(k.w!=null){cat.wStd=k.w;sec.wStd+=k.w;put(k.id,[sec,cat])}continue}
-    if(k.w==null){out.push({lv:'hdr',text:k.text});continue}
+    if(k.no){cat={lv:'cat',id:k.id,no:k.no,text:k.text,row:k.w!=null?k:null,...z()};out.push(cat);if(k.w!=null){cat.wStd=k.w;sec.wStd+=k.w;put(k.id,[sec,cat])}continue}
+    if(k.w==null){out.push({lv:'hdr',id:k.id,text:k.text});continue}
     const ln={lv:'line',row:k,...z(),wStd:k.w};out.push(ln);sec.wStd+=k.w;if(cat)cat.wStd+=k.w;put(k.id,[sec,...(cat?[cat]:[]),ln]);
   }
   if(rows.some(r=>!ids.has(r.t.kpi))){const nb={lv:'none',...z()};out.push(nb);put('',[sec,nb])}

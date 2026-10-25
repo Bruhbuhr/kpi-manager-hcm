@@ -194,8 +194,10 @@ function monthTable(e,y,mm,st,opt={}){
     /* Ghi chú / Link bằng chứng: chỉ hiện icon 📄, bấm vào xem nội dung (bản In / PDF vẫn in đủ chữ) */
     {h:'Ghi chú / Link',c:'ntc',f:r=>{const fs=filesOf(r.t);return r.t.note||fs.length?`<button type="button" class="ntb" data-act="note-view" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" title="Xem ghi chú / file bằng chứng${fs.length?' ('+fs.length+' file)':''}" aria-label="Xem ghi chú việc ${r.i+1}">${fs.length?'📎':'📄'}${fs.length?`<em class="ntn">${fs.length}</em>`:''}</button><span class="ntp" hidden>${linkify(r.t.note||'')}${fs.length?`${r.t.note?'\n':''}📎 ${fs.map(f=>esc(f.name)).join(', ')}`:''}</span>`:''},x:r=>[r.t.note||'',...filesOf(r.t).map(f=>f.url)].filter(Boolean).join('\n')},
     {h:'Comment by Manager',c:'mcc',f:r=>mcCell(e,y,mm,r),x:mcX},
-    actCol(r=>!w?'':r.sc.state==='moved'?`<button class="btn sm" data-act="kt-undo" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" aria-label="Hoàn tác chuyển việc ${r.i+1}">Hoàn tác</button>`
-      :canTask(e.id,r.t)?`<button class="btn sm" data-act="kt-edit" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" aria-label="Sửa việc ${r.i+1}">Sửa</button>`:'<span class="muted" title="Việc đã được quản lý Duyệt, chỉ quản lý sửa được">Đã duyệt</span>')
+    Object.assign(actCol(r=>!w?'':r.sc.state==='moved'?`<button class="btn sm" data-act="kt-undo" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" aria-label="Hoàn tác chuyển việc ${r.i+1}">Hoàn tác</button>`
+      :canTask(e.id,r.t)?`<button class="btn sm" data-act="kt-edit" data-e="${e.id}" data-y="${y}" data-mm="${mm}" data-id="${r.t.id}" aria-label="Sửa việc ${r.i+1}">Sửa</button>`:'<span class="muted" title="Việc đã được quản lý Duyệt, chỉ quản lý sửa được">Đã duyệt</span>'),
+      /* dòng mục I / nhóm / tiêu đề / chỉ tiêu: quản lý sửa ngay dòng đó */
+      {hf:h=>!mg||h.lv==='none'?'':`<button class="btn sm" data-act="kc-row" data-e="${e.id}" data-y="${y}" data-id="${esc(h.lv==='sec'?'':h.lv==='line'?h.row.id:h.id)}" aria-label="${esc('Sửa '+(h.lv==='sec'?'mục I':kpiLabel(h.lv==='line'?h.row.text:h.text)))}">Sửa</button>`})
   ].filter(Boolean);
   if(grp)cols.forEach(c=>{const f=c.f,x=c.x;if(f)c.f=r=>r.hdr?(c.hf?c.hf(r.hdr):''):f(r);if(x)c.x=r=>r.hdr?(c.hx?c.hx(r.hdr):''):x(r)});   /* dòng nhóm dùng hf / hx của từng cột */
   const nVis=cols.filter(c=>!c.xonly).length,live=tk.filter(r=>r.sc.state!=='moved').length,c0=grp?3:2;
@@ -277,6 +279,39 @@ SUB['kc-save']=form=>{
   const sh0=sheetOf(e,y),next={sec:(fd(form).sec||'').trim(),rows},sig=k=>JSON.stringify([k.sec||'',k.rows.map(r=>[r.id,r.no||'',r.text,r.w??null,r.rule||''])]);   /* so theo nội dung, không theo thứ tự khoá */
   if(sh0&&sh0.kpi&&sig(sh0.kpi)===sig(next)){closeModal();return toast('Không có thay đổi.')}
   if(transact(()=>{const sh=sheetOf(e,y,true);sh.kpi=next;sh.updatedAt=todayStr()}))done('Đã lưu danh mục chỉ tiêu KPI');
+};
+/* Sửa một dòng của danh mục ngay trên bảng Khung 2 (nút Sửa ở dòng mục I / nhóm / tiêu đề / chỉ tiêu) – Admin / Quản lý.
+   Giữ nguyên id của dòng nên các việc đã gắn vẫn gắn; thêm / xoá dòng vẫn ở nút "Chỉ tiêu KPI". data-id trống = tên mục I. */
+ACT['kc-row']=el=>{
+  if(!can('manage'))return toast('Chỉ quản lý được sửa danh mục chỉ tiêu KPI.','error');
+  const {e,y,id}=el.dataset,k=kpiOf(e,y);if(!k)return toast('Chưa có danh mục chỉ tiêu KPI.','warn');
+  const form=(body,note)=>`<form id="mf" data-submit="kc-row-save" data-e="${esc(e)}" data-y="${esc(y)}" data-id="${esc(id||'')}" novalidate><div class="fg">${body}<p class="note full" style="padding:0">${note}</p></div></form>`,ft={footer:cancelBtn+'<button class="btn primary" form="mf">Lưu</button>'};
+  if(!id)return modal(`Sửa mục I · ${empName(e)} · ${y}`,form(inp('sec','Tên mục I',k.sec||'',{full:1}),'Tên mục I hiện ở dòng đầu của Khung 2.'),ft);
+  const r=k.rows.find(x=>x.id===id);if(!r)return toast('Dòng này không còn trong danh mục.','error');
+  const u=kpiUse(e,y,x=>x===id);
+  modal(`Sửa ${r.no?'nhóm '+r.no:r.w==null?'dòng tiêu đề':'chỉ tiêu'} · ${empName(e)} · ${y}`,form(
+    `${inp('no','Nhóm số <small class="muted">(để trống = thuộc nhóm phía trên)</small>',r.no||'')}${inp('w','Trọng số chỉ tiêu (%) <small class="muted">(để trống = dòng tiêu đề)</small>',r.w!=null&&Number.isFinite(+r.w)?+r.w:'',{type:'number',step:'any',attrs:'min="0" max="100" inputmode="decimal"'})}
+    ${txa('text','Chỉ tiêu <i style="color:var(--bad);font-style:normal">*</i>',r.text||'',{full:1,rows:3})}${txa('rule','Quy ước đánh giá',r.rule||'',{full:1,rows:3})}`,
+    `${u.n?`Đang gắn ${u.n} việc (${esc(u.by)}); sửa nội dung không làm mất các việc đã gắn. `:''}Điểm của việc không đổi. Thêm / xoá dòng: nút <b>Chỉ tiêu KPI</b> ở đầu Khung 2.`),ft);
+};
+document.addEventListener('input',ev=>{const f=ev.target.closest&&ev.target.closest('form[data-submit="kc-row-save"]');if(f){ev.target.classList.remove('bad');ev.target.removeAttribute('aria-invalid')}});
+SUB['kc-row-save']=form=>{
+  if(!can('manage'))return toast('Chỉ quản lý được sửa danh mục chỉ tiêu KPI.','error');
+  const {e,y,id}=form.dataset,k=kpiOf(e,y),f=fd(form);if(!k)return closeModal();
+  const bad=(n,msg)=>{const el=form.querySelector(`[name=${n}]`);el.classList.add('bad');el.setAttribute('aria-invalid','true');el.focus();toast(msg,'error')};   /* báo lỗi ngay tại ô sai */
+  let next,same;
+  if(!id){next={sec:String(f.sec||'').trim()};same=(k.sec||'')===next.sec}
+  else{const r=k.rows.find(x=>x.id===id);if(!r)return toast('Dòng này không còn trong danh mục.','error');
+    const text=String(f.text||'').trim(),ws=String(f.w??'').trim(),w=ws===''?null:Number(ws.replace(',','.'));
+    if(!text)return bad('text','Cần có nội dung Chỉ tiêu.');
+    if(w!=null&&!(w>=0&&w<=100))return bad('w','Trọng số chỉ tiêu phải từ 0 đến 100.');
+    next={no:String(f.no||'').trim().replace(/\.$/,''),text,w,rule:String(f.rule||'').trim()};
+    same=['no','text','rule'].every(p=>(r[p]||'')===next[p])&&(r.w??null)===next.w;
+    if(!same&&r.w!=null&&w==null){const u=kpiUse(e,y,x=>x===id);if(u.n&&!confirm(`Để trống trọng số thì dòng này thành dòng tiêu đề và ${u.n} việc đang gắn (${u.by}) về “Chưa phân loại”. Tiếp tục?`))return}}
+  if(same){closeModal();return toast('Không có thay đổi.')}
+  if(transact(()=>{const sh=sheetOf(e,y,true);if(!sh.kpi)sh.kpi=JSON.parse(JSON.stringify(k));   /* năm đang dùng tạm danh mục năm trước: chép sang năm này */
+    if(id)Object.assign(sh.kpi.rows.find(x=>x.id===id),next);else sh.kpi.sec=next.sec;sh.updatedAt=todayStr()})){
+    done('Đã lưu chỉ tiêu KPI');const b=[...document.querySelectorAll('[data-act="kc-row"]')].find(x=>x.dataset.id===(id||''));if(b)b.focus()}   /* con trỏ về lại nút Sửa của dòng vừa sửa */
 };
 /* Gắn chỉ tiêu KPI ngay trên bảng cho việc ở "Chưa phân loại": chọn trong ô rồi bấm Gắn. Đổi lựa chọn chưa lưu, vì Chrome / Edge trên Windows
    phát change ngay khi bấm phím mũi tên. Chỉ ghi task.kpi (không đổi điểm, không đụng trạng thái duyệt) nên nhân viên gắn được cả việc đã Duyệt;
